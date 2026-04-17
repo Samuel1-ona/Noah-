@@ -8,9 +8,34 @@ Noah eliminates the redundancy of KYC on-chain. By using Fully Homomorphic Encry
 
 ---
 
-## 🏗️ Architecture: Coprocessor-Enabled Privacy
 
-Unlike legacy systems, Noah operates with a **Coprocessor-first** architecture. Heavy cryptographic computations (FHE) are offloaded to Fhenix, while the truth remains anchored on Ethereum Sepolia.
+## 🌟 Use Cases
+
+Here is what you can build with Noah:
+
+### 1. Gaming & Web3 E-Sports
+Keep your leaderboards fair. Verify that each player is a unique human behind the keyboard, putting an end to multi-accounting and bots.
+
+### 2. Consumer Applications
+Age-gate your content or services effortlessly. Prove your user is over 18 without asking them to upload a photo of their ID card to your servers.
+
+### 3. DeFi & RWA Platforms
+Onboard users securely. Meet strict KYC requirements while preserving your users' on-chain privacy.
+
+---
+
+## 🎨 Interactive Experience
+
+Noah isn't just a protocol; it's a complete platform with professional presentation tools:
+
+- **Professional Pitch Deck**: An interactive, slide-based presentation built directly into the UI to communicate Noah's value proposition to stakeholders.
+- **Visual Data Flow**: A high-fidelity animated diagram that visualizes the technical process of transforming sensitive MRZ data into private ZK-Proofs.
+
+---
+
+## 🏗️ Architecture: Backend-less & Decentralized
+
+Unlike legacy systems, Noah operates without a central backend for proof generation. All cryptographic heavy lifting occurs on the user's device.
 
 ### High-Level Flow
 
