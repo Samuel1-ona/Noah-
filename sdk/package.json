@@ -1,6 +1,6 @@
 {
   "name": "noah-protocol",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Verify once, use everywhere.",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -30,9 +30,10 @@
   "author": "NOAH Protocol",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.6.2",
-    "ethers": "^6.0.0",
     "@cofhe/sdk": "^0.1.0",
+    "axios": "^1.6.2",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.0.0",
     "tesseract.js": "^5.1.1"
   },
   "devDependencies": {

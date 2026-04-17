@@ -46,7 +46,13 @@ export class UserClient {
     }
 
     this.signer = signer;
+    
+    // Check for issuer key in config, or fallback to environment variables (Node.js only)
     this.issuerPrivateKey = config.issuerPrivateKey;
+    
+    if (!this.issuerPrivateKey && typeof process !== 'undefined' && process.env) {
+      this.issuerPrivateKey = process.env.NOAH_ISSUER_PRIVATE_KEY;
+    }
 
     this.contractClient = new ContractClient({
       provider: signer.provider || undefined,
