@@ -8,6 +8,7 @@ import {
     CheckCircle2,
     Loader2,
     AlertCircle,
+    Info,
     Cpu,
     Wallet,
     Send
@@ -50,15 +51,14 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
 
     const [extractedData, setExtractedData] = useState<any>(null);
     const [txHash, setTxHash] = useState<string | null>(null);
+    const [lastFile, setLastFile] = useState<File | null>(null);
+    const [isChecksumError, setIsChecksumError] = useState(false);
 
 
     const [fheInput, setFheInput] = useState<any>(null);
     const [isAlreadyVerified, setIsAlreadyVerified] = useState<boolean>(false);
     const [accessStatus, setAccessStatus] = useState<'none' | 'requesting' | 'pending' | 'granted' | 'denied'>('none');
     
-    // Fetch protocol address from SDK instead of hardcoding or env
-    const protocolAddress = sdk?.contracts.getContractAddresses().ProtocolAccessControl || '';
-
     const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -103,18 +103,31 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
     ];
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
+        const file = e.target.files?.[0] || lastFile;
         if (file && sdk) {
+            setLastFile(file);
             setFileName(file.name);
             setIsProcessing(true);
             setError(null);
+            setIsChecksumError(false);
             try {
-                const data = await sdk.extractPassportData(file);
+                // By default, extractIdentityData now uses permissive mode (strict: false, force: true)
+                const data = await sdk.extractIdentityData(file);
                 console.log("Extracted Data:", data);
                 setExtractedData(data);
+                
+                // Track if any checksum failed for UI warnings
+                const hasChecksumFailure = data.checksums && 
+                    (!data.checksums.documentNumber || !data.checksums.dateOfBirth || !data.checksums.expiryDate);
+                
+                if (hasChecksumFailure) {
+                    setIsChecksumError(true);
+                }
+
                 setCurrentStep('witness');
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to extract data');
+                const msg = err instanceof Error ? err.message : 'Failed to extract data';
+                setError(msg);
             } finally {
                 setIsProcessing(false);
             }
@@ -231,13 +244,33 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
 
     const renderContent = () => {
         if (error) {
+            const isCatastrophic = error.includes('Could not detect') || error.includes('Insufficient');
+            const debugInfo = error.includes('[DEBUG:') ? error.split('[DEBUG:')[1].split(']')[0] : null;
+
             return (
                 <div style={{ textAlign: 'center' }}>
-                    <div style={{ color: '#EF4444', marginBottom: '1.5rem', background: 'rgba(239, 68, 68, 0.1)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                        <p style={{ fontWeight: 600 }}>Error encountered:</p>
-                        <p style={{ fontSize: '0.875rem' }}>{error}</p>
+                    <div style={{ color: '#EF4444', marginBottom: '1.5rem', background: 'rgba(239, 68, 68, 0.1)', padding: '1.5rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <AlertCircle size={24} />
+                            <p style={{ fontWeight: 700, fontSize: '1.1rem' }}>Scan Error</p>
+                        </div>
+                        <p style={{ fontSize: '0.9rem', marginBottom: '1.5rem', opacity: 0.9 }}>
+                            {isCatastrophic ? "We couldn't find a valid MRZ in this photo. Please retake the photo in better lighting." : error.split('[DEBUG:')[0].trim()}
+                        </p>
+                        
+                        {debugInfo && (
+                            <div style={{ marginTop: '1.5rem', textAlign: 'left', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
+                                <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: 700 }}>Diagnostics</p>
+                                <div style={{ background: 'rgba(0,0,0,0.4)', padding: '1rem', borderRadius: '0.5rem', fontSize: '0.6rem', fontFamily: 'var(--font-mono)', color: 'var(--primary)', whiteSpace: 'pre-wrap', maxHeight: '120px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                    {debugInfo.split('|').map((line, i) => <div key={i}>{line}</div>)}
+                                </div>
+                            </div>
+                        )}
                     </div>
-                    <button className="btn btn-outline" onClick={reset} style={{ width: '100%' }}>Try Again</button>
+                    
+                    <button className="btn btn-outline" onClick={reset} style={{ width: '100%', background: 'rgba(255,255,255,0.05)' }}>
+                        Try Again
+                    </button>
                 </div>
             );
         }
@@ -300,32 +333,75 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
                     <div style={{ textAlign: 'center' }}>
                         <div className="glass" style={{ padding: '2rem', marginBottom: '2rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', textAlign: 'left', background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: '0.5rem' }}>
-                                <div style={{ gridColumn: 'span 2', marginBottom: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                <div style={{ gridColumn: 'span 2', marginBottom: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <p style={{ fontSize: '0.875rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <FileText size={16} className="text-primary" /> MRZ Data Extracted {fileName && `from ${fileName} `}
                                     </p>
+                                    <span style={{ 
+                                        fontSize: '0.65rem', 
+                                        background: 'rgba(var(--primary-rgb), 0.2)', 
+                                        color: 'var(--primary)', 
+                                        padding: '0.2rem 0.6rem', 
+                                        borderRadius: '1rem',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase'
+                                    }}>
+                                        {extractedData?.format === 'TD1' ? 'Identity Card' : 'Standard Passport'}
+                                    </span>
                                 </div>
-                                <div>
+                                <div style={{ position: 'relative' }}>
                                     <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>First Name</p>
                                     <p style={{ fontWeight: 600 }}>{extractedData?.firstName || 'JONATHAN'}</p>
                                 </div>
-                                <div>
+                                <div style={{ position: 'relative' }}>
                                     <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Last Name</p>
                                     <p style={{ fontWeight: 600 }}>{extractedData?.lastName || 'DUNN'}</p>
                                 </div>
-                                <div>
-                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Passport No.</p>
-                                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>{extractedData?.passportNumber || 'A20138271'}</p>
+                                <div style={{ position: 'relative' }}>
+                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                        {extractedData?.format === 'TD1' ? 'Document ID' : 'Passport No.'}
+                                        {extractedData?.checksums && !extractedData.checksums.documentNumber && (
+                                            <AlertCircle size={10} color="#F97316" />
+                                        )}
+                                    </p>
+                                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', color: extractedData?.checksums && !extractedData.checksums.documentNumber ? '#F97316' : 'var(--text)' }}>
+                                        {extractedData?.documentNumber || extractedData?.passportNumber || 'A20138271'}
+                                    </p>
                                 </div>
-                                <div>
-                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Nationality</p>
-                                    <p style={{ fontWeight: 600 }}>{extractedData?.nationality || 'USA'}</p>
+                                <div style={{ position: 'relative' }}>
+                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                        Date of Birth
+                                        {extractedData?.checksums && !extractedData.checksums.dateOfBirth && (
+                                            <AlertCircle size={10} color="#F97316" />
+                                        )}
+                                    </p>
+                                    <p style={{ fontWeight: 600, color: extractedData?.checksums && !extractedData.checksums.dateOfBirth ? '#F97316' : 'var(--text)' }}>
+                                        {extractedData?.dateOfBirth ? new Date(extractedData.dateOfBirth).toLocaleDateString() : '01/01/1990'}
+                                    </p>
                                 </div>
                                 <div style={{ gridColumn: 'span 2', marginTop: '0.5rem' }}>
-                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Raw MRZ</p>
-                                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', wordBreak: 'break-all', opacity: 0.8 }}>
-                                        P&lt;{extractedData?.issuingState || 'USA'}{extractedData?.lastName || 'DUNN'}&lt;&lt;{extractedData?.firstName || 'JONATHAN'}&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;
-                                    </p>
+                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Raw MRZ Data</p>
+                                    <div style={{ 
+                                        fontFamily: 'var(--font-mono)', 
+                                        fontSize: '0.65rem', 
+                                        wordBreak: 'break-all', 
+                                        opacity: 0.8,
+                                        background: 'rgba(0,0,0,0.3)',
+                                        padding: '0.75rem',
+                                        borderRadius: '0.25rem',
+                                        marginTop: '0.25rem',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '0.2rem'
+                                    }}>
+                                        {extractedData?.mrzLines ? (
+                                            extractedData.mrzLines.map((line: string, idx: number) => (
+                                                <div key={idx}>{line}</div>
+                                            ))
+                                        ) : (
+                                            <div>SCANNING...</div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>

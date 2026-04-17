@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Fingerprint, CreditCard, MapPin, Landmark, ShieldCheck, Lock, CheckCircle2, ArrowRight, Cpu, Shield } from 'lucide-react';
+import { CreditCard, MapPin, ShieldCheck, Lock, CheckCircle2, ArrowRight, Cpu } from 'lucide-react';
 
 interface FlowNodeProps {
     icon: React.ReactNode;
