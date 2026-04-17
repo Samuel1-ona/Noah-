@@ -1,7 +1,7 @@
 import { ContractClient } from './ContractClient.js';
 import { APIClient, type APIClientConfig } from './APIClient.js';
 import { OCRExtractor } from '../utils/ocr.js';
-import { parseTD3, type MRZData } from '../utils/mrz.js';
+import { extractMRZData, type MRZData, type MRZOptions } from '../utils/mrz.js';
 import type {
     ContractClientConfig,
     Proof,
@@ -44,25 +44,29 @@ export class NoahSDK {
     }
 
     /**
-     * Extract identity data from a document image
-     * @param image - File or URL of the passport image
+     * Extract identity data from a document image (Passport or ID Card)
+     * @param image - File, URL, or Blob of the document image
+     * @param options - Optional MRZ parsing options (defaults to permissive in demo)
      */
-    public async extractPassportData(image: File | string | Blob): Promise<MRZData> {
+    public async extractIdentityData(image: File | string | Blob, options: MRZOptions = { strict: false, force: true }): Promise<MRZData> {
         const { mrzLines } = await this.ocrExtractor.extractMRZ(image);
 
-        if (mrzLines.length < 2) {
-            throw new NoahValidationError('Could not detect MRZ lines in the image. Please ensure the bottom part of the passport is clearly visible.');
+        if (mrzLines.length === 0) {
+            throw new NoahValidationError('Could not detect MRZ lines in the image. Please ensure the document is clear and properly aligned.');
         }
-
-        // We assume the last two lines are the TD3 MRZ lines
-        const line1 = mrzLines[mrzLines.length - 2];
-        const line2 = mrzLines[mrzLines.length - 1];
 
         try {
-            return parseTD3(line1, line2);
+            return extractMRZData(mrzLines, options);
         } catch (error) {
-            throw new NoahValidationError(`Failed to parse MRZ: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            throw new NoahValidationError(`Failed to parse identity data: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
+    }
+
+    /**
+     * Legacy alias for extractIdentityData
+     */
+    public async extractPassportData(image: File | string | Blob): Promise<MRZData> {
+        return this.extractIdentityData(image);
     }
 
     /**

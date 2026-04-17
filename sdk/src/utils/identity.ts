@@ -1,5 +1,5 @@
 import { OCRExtractor } from './ocr.js';
-import { parseTD3, type MRZData } from './mrz.js';
+import { extractMRZData, type MRZData } from './mrz.js';
 
 export interface IdentityProfile extends MRZData {
     confidence: number;
@@ -23,18 +23,21 @@ export class IdentityManager {
     async extractFromImage(imageSource: string | File | Blob): Promise<IdentityProfile> {
         const ocrResult = await this.ocr.extractMRZ(imageSource);
 
-        if (ocrResult.mrzLines.length < 2) {
-            throw new Error(`Failed to detect MRZ lines in image. Raw text: ${ocrResult.rawText.substring(0, 100)}...`);
+        if (ocrResult.mrzLines.length === 0) {
+            throw new Error(`Failed to detect MRZ lines in image. Please ensure the document is clear and properly aligned.`);
         }
 
-        // Attempt to parse the detected lines (assuming TD3/Passport for now)
-        // TD3 expects two lines of 44 characters
-        const mrzData = parseTD3(ocrResult.mrzLines[0], ocrResult.mrzLines[1]);
+        try {
+            // Use the universal parser to handle TD1 (ID cards) and TD3 (Passports)
+            const mrzData = extractMRZData(ocrResult.mrzLines);
 
-        return {
-            ...mrzData,
-            confidence: ocrResult.confidence,
-        };
+            return {
+                ...mrzData,
+                confidence: ocrResult.confidence,
+            };
+        } catch (error: any) {
+            throw new Error(`Failed to parse identity data: ${error.message}`);
+        }
     }
 
     /**

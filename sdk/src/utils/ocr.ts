@@ -7,26 +7,33 @@ export interface OCROutput {
 }
 
 /**
- * OCR Extractor for processing identity documents in the browser
+ * OCR Extractor optimized for Identity Documents (Passports, ID Cards)
  */
 export class OCRExtractor {
     private worker: Worker | null = null;
     private initialized: boolean = false;
 
     /**
-     * Initialize the Tesseract worker
+     * Initialize Tesseract worker with MRZ-friendly parameters
      */
     async initialize() {
         if (this.initialized) return;
 
-        this.worker = await createWorker('eng'); // MRZ is always Latin characters
+        // MRZ is always Latin characters (OCR-B font standard)
+        this.worker = await createWorker('eng'); 
+        
+        await this.worker.setParameters({
+            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<',
+            tessedit_pageseg_mode: '6' as any, // Assume a single uniform block of text
+            preserve_interword_spaces: '0',    // MRZ shouldn't have inter-word spaces
+        });
+
         this.initialized = true;
     }
 
     /**
      * Extract MRZ data from an image
-     * @param imageSource - URL, File, or Blob of the document image
-     * @returns Extracted text and MRZ lines
+     * @param imageSource - URL, File, or Blob
      */
     async extractMRZ(imageSource: string | File | Blob): Promise<OCROutput> {
         await this.initialize();
@@ -35,40 +42,38 @@ export class OCRExtractor {
             throw new Error('OCR Worker not initialized');
         }
 
-        // Set parameters to optimize for MRZ
-        // MRZ uses a specific OCR-B font, but standard 'eng' is usually sufficient
-        // We can restrict characters to A-Z, 0-9, and '<'
-        await this.worker.setParameters({
-            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<',
-        });
+        const { data } = await this.worker.recognize(imageSource);
+        const { text, confidence, lines } = data;
 
-        const { data: { text, confidence } } = await this.worker.recognize(imageSource);
-
-        const mrzLines = this.filterMRZLines(text);
+        // More robust line extraction using positional data
+        const detectedLines = this.extractValidMRZLines(lines);
 
         return {
             rawText: text,
-            mrzLines,
+            mrzLines: detectedLines,
             confidence,
         };
     }
 
     /**
-     * Filter and clean MRZ lines from raw OCR text
+     * Identify and sort valid MRZ lines (TD1 or TD3) from OCR blocks
      */
-    private filterMRZLines(text: string): string[] {
-        const lines = text.split('\n').map(l => l.trim().replace(/\s/g, ''));
+    private extractValidMRZLines(ocrLines: any[]): string[] {
+        // Regex for TD3 (44 chars) or TD1 (30 chars)
+        const td3Regex = /^[A-Z0-9<]{44}$/;
+        const td1Regex = /^[A-Z0-9<]{30}$/;
 
-        // TD3 MRZ (Passport) is 2 lines of 44 characters
-        // TD1 (ID Card) is 3 lines of 30 characters
-        // We look for lines containing multiple '<' characters
-        return lines.filter(line => {
-            const charCount = line.length;
-            const chevronCount = (line.match(/</g) || []).length;
+        const validLines = ocrLines
+            .map(line => ({
+                text: line.text.trim().toUpperCase().replace(/\s/g, ''),
+                y: line.bbox.y0 // Vertical position
+            }))
+            .filter(item => item.text.length >= 28 && item.text.length <= 46);
 
-            // Heuristic: MRZ lines are long and have many chevrons
-            return (charCount >= 30 && chevronCount >= 2);
-        });
+        // Sort by vertical position (top to bottom)
+        return validLines
+            .sort((a, b) => a.y - b.y)
+            .map(item => item.text);
     }
 
     /**
