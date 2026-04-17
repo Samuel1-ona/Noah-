@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Box, Terminal, Code2, Layers, Copy, Check, ChevronRight, AlertCircle, CheckCircle2, Shield, Gamepad2, Landmark } from 'lucide-react';
 
-type Section = 'overview' | 'use-cases' | 'installation' | 'initialization' | 'proving' | 'verifying' | 'examples';
+type Section = 'overview' | 'use-cases' | 'installation' | 'initialization' | 'proving' | 'verifying' | 'pricing' | 'examples';
 
 export const SDKDocs: React.FC = () => {
     const [activeSection, setActiveSection] = useState<Section>('overview');
@@ -18,10 +18,11 @@ export const SDKDocs: React.FC = () => {
         { id: 'overview', label: 'Overview', icon: <BookOpen size={18} /> },
         { id: 'use-cases', label: 'Use Cases', icon: <Layers size={18} /> },
         { id: 'installation', label: 'Installation', icon: <Box size={18} /> },
-        { id: 'initialization', label: 'Initialization', icon: <Terminal size={18} /> },
-        { id: 'proving', label: 'Proof Generation', icon: <Code2 size={18} /> },
-        { id: 'verifying', label: 'On-Chain Verification', icon: <Layers size={18} /> },
-        { id: 'examples', label: 'Examples', icon: <Code2 size={18} /> },
+        { id: 'initialization', label: 'SDK Setup', icon: <Terminal size={18} /> },
+        { id: 'proving', label: 'Identity Services', icon: <Code2 size={18} /> },
+        { id: 'verifying', label: 'On-Chain Lifecycle', icon: <Layers size={18} /> },
+        { id: 'pricing', label: 'Pricing & Tiers', icon: <Landmark size={18} /> },
+        { id: 'examples', label: 'API Reference', icon: <Code2 size={18} /> },
     ];
 
     const CodeBlock = ({ code, label, id }: { code: string; label: string; id: string }) => (
@@ -68,27 +69,27 @@ export const SDKDocs: React.FC = () => {
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                         <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>Noah SDK Overview</h1>
                         <p style={{ fontSize: '1.125rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '2rem' }}>
-                            The Noah SDK is the gateway to privacy-preserving identity. It bridges human identity documents with the blockchain using Fully Homomorphic Encryption (FHE), allowing users to prove attributes (like age or citizenship) without revealing their personal data.
+                            The Noah SDK is the gateway to privacy-preserving identity on **Ethereum Sepolia**. Built on the **Fhenix Coprocessor**, it enables users to bind their identity attributes to their wallet using client-side Fully Homomorphic Encryption (CoFHE).
                         </p>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '3rem' }}>
                             <div className="glass" style={{ padding: '1.5rem' }}>
-                                <h4 style={{ color: 'var(--primary)', marginBottom: '0.5rem' }}>Client-Side Privacy</h4>
-                                <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Sensitive data like MRZ lines stay in the browser. ZK-Proofs are generated locally or in secure enclaves.</p>
+                                <h4 style={{ color: 'var(--primary)', marginBottom: '0.5rem' }}>Verify Once, Use Everywhere</h4>
+                                <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Users register their identity once on Sepolia. integrated apps can verify attributes instantly without redundant KYC.</p>
                             </div>
                             <div className="glass" style={{ padding: '1.5rem' }}>
-                                <h4 style={{ color: 'var(--primary)', marginBottom: '0.5rem' }}>FHEVM Ready</h4>
-                                <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Built-in support for FHEVM with native encrypted types and private state management.</p>
+                                <h4 style={{ color: 'var(--primary)', marginBottom: '0.5rem' }}>Fhenix Coprocessor (CoFHE)</h4>
+                                <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Perform private computation (like age &gt; 18) directly on encrypted data without revealing the raw values to the network.</p>
                             </div>
                         </div>
 
-                        <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>Full Integration Guide</h3>
+                        <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>Integration Lifecycle</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             {[
-                                { step: "1", title: "Initialize SDK", desc: "Connect the SDK to your wallet provider and the network RPC." },
-                                { step: "2", title: "Check Existing KYC", desc: "Immediately check if the connected address already has a registered credential to prevent redundant flows." },
-                                { step: "3", title: "OCR Extraction", desc: "Scan physical documents locally using the built-in MRZ extractor." },
-                                { step: "4", title: "Proof Submission", desc: "Trigger an on-chain registration that binds the identity to the user's wallet." },
-                                { step: "5", title: "Track Transactions", desc: "Monitor confirmations and provide direct links to the block explorer." }
+                                { step: "1", title: "Initialize SDK", desc: "Connect the Noah SDK to your Sepolia RPC and protocol contracts." },
+                                { step: "2", title: "Automated OCR", desc: "Scan physical documents locally using the high-performance MRZ extractor." },
+                                { step: "3", title: "Client-Side Encryption", desc: "Encrypt identity attributes (like age) for the Fhenix Coprocessor using CoFHE." },
+                                { step: "4", title: "Identity Binding", desc: "Submit the encrypted identity to the Sepolia registry via a trusted Issuer." },
+                                { step: "5", title: "Private Verification", desc: "Verify user eligibility using FHE permits and unsealing—zero data exposure." }
                             ].map((s) => (
                                 <div key={s.step} style={{ display: 'flex', gap: '1.5rem', padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '1rem', border: '1px solid var(--border)' }}>
                                     <div style={{ background: 'var(--primary)', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0 }}>
@@ -108,28 +109,28 @@ export const SDKDocs: React.FC = () => {
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                         <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>Use Cases</h1>
                         <p style={{ fontSize: '1.125rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '2.5rem' }}>
-                            The Noah SDK enables a wide range of privacy-first applications. By separating identity verification from data disclosure, protocols can enforce complex rules without ever seeing personal user data.
+                            The Noah SDK enables a wide range of privacy-first applications. By leveraging the Fhenix Coprocessor, protocols can enforce complex rules on encrypted user data without ever revealing the underlying identity.
                         </p>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
                             {[
                                 {
                                     icon: <Gamepad2 size={24} />,
-                                    title: "Gaming & Web3 E-Sports",
-                                    desc: "Keep your leaderboards fair. Verify that each player is a unique human behind the keyboard, putting an end to multi-accounting and bots."
+                                    title: "Fair Gaming & E-Sports",
+                                    desc: "Verify that each player is a unique human. Prevent multi-accounting and bots on Sepolia-based games without storing personal player data."
                                 },
                                 {
                                     icon: <Shield size={24} />,
-                                    title: "Consumer Applications",
-                                    desc: "Age-gate your content or services effortlessly. Prove your user is over 18 without asking them to upload a photo of their ID card to your servers."
+                                    title: "Compliant Consumer Apps",
+                                    desc: "Age-gate content or services effortlessly. Private attributes are checked via CoFHE, ensuring you never sit on a liability of user ID data."
                                 },
                                 {
                                     icon: <Landmark size={24} />,
-                                    title: "DeFi & RWA Platforms",
-                                    desc: "Onboard users securely. Meet strict KYC requirements while preserving your users' on-chain privacy."
+                                    title: "DeFi & RWA Onboarding",
+                                    desc: "Onboard users to sensitive protocols. Meet strict compliance requirements while maintaining top-tier on-chain privacy for your liquidity providers."
                                 }
                             ].map((uc, i) => (
                                 <div key={i} className="glass" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    <div style={{ color: 'var(--primary)', background: 'rgba(255,255,255,0.05)', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <div style={{ color: 'var(--primary)', background: 'rgba(var(--primary-rgb), 0.05)', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         {uc.icon}
                                     </div>
                                     <h4 style={{ fontSize: '1.1rem', fontWeight: 700 }}>{uc.title}</h4>
@@ -143,7 +144,7 @@ export const SDKDocs: React.FC = () => {
                 return (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                         <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>Installation</h1>
-                        <p style={{ marginBottom: '1.5rem', color: 'var(--text-muted)' }}>The Noah Protocol SDK is published as `noah-protocol`. It provides all tools necessary for FHE encryption, MRZ extraction, and smart contract interaction.</p>
+                        <p style={{ marginBottom: '1.5rem', color: 'var(--text-muted)' }}>The Noah Protocol SDK is published as `noah-protocol`. It provides all tools necessary for CoFHE encryption, MRZ extraction, and Sepolia smart contract interaction.</p>
 
                         <div style={{ marginBottom: '2.5rem' }}>
                             <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>Production Install</h3>
@@ -155,17 +156,17 @@ export const SDKDocs: React.FC = () => {
                                 <Layers size={18} className="text-primary" /> Peer Dependencies
                             </h4>
                             <p style={{ fontSize: '0.875rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>
-                                Noah requires `ethers` (v6) for blockchain connectivity. If you are building for the web, ensure your environment supports `WASM` for the internal prover.
+                                Noah requires `ethers` (v6) for blockchain connectivity and `@fhenixprotocol/js-sdk` for CoFHE operations.
                             </p>
-                            <CodeBlock code='{\n  "dependencies": {\n    "noah-protocol": "^0.1.2",\n    "ethers": "^6.10.0",\n    "framer-motion": "^11.0.0"\n  }\n}' label="package.json" id="package-deps-v2" />
+                            <CodeBlock code='{\n  "dependencies": {\n    "noah-protocol": "^2.0.0",\n    "ethers": "^6.10.0",\n    "@fhenixprotocol/js-sdk": "^0.2.1"\n  }\n}' label="package.json" id="package-deps-v2" />
                         </div>
 
                         <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '1.5rem', borderRadius: '1rem', marginTop: '2.5rem' }}>
                             <h4 style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                <AlertCircle size={18} /> OS Compatibility
+                                <AlertCircle size={18} /> Performance Notice
                             </h4>
                             <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                                The underlying ZK library (`barretenberg`) optimized for WASM performs best on modern browsers. For Node.js environments, ensure you have sufficient memory for proof generation (&gt;4GB).
+                                CoFHE encryption uses WASM-based cryptographic primitives. For optimal performance, ensure your environment supports `Wasm` and has &gt;2GB of available memory during encryption cycles.
                             </p>
                         </div>
                     </motion.div>
@@ -173,51 +174,40 @@ export const SDKDocs: React.FC = () => {
             case 'initialization':
                 return (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>Initialization</h1>
+                        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>SDK Setup</h1>
                         <p style={{ marginBottom: '2rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                            Noah should be initialized once in your application's lifecycle, typically within a context provider or a dedicated hook. It requires a `signer` for write operations and an `rpcUrl` for querying the Zama network.
+                            The Noah SDK should be initialized with your Sepolia RPC and the protocol's contract addresses. In the frontend, always use a public configuration.
                         </p>
 
                         <div style={{ marginBottom: '3rem' }}>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>Basic Setup</h3>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>Client Configuration</h3>
                             <CodeBlock
                                 label="src/hooks/useNoah.ts"
                                 id="init-code-v2"
-                                code={`import { NoahSDK } from 'noah-protocol';\nimport { ethers } from 'ethers';\n\n// 1. Setup your provider (e.g., MetaMask)\nconst provider = new ethers.BrowserProvider(window.ethereum);\n\n// 2. Initialize the Noah SDK with environment variables\nconst sdk = new NoahSDK({\n  rpcUrl: import.meta.env.VITE_RPC_URL, // Example: 'https://sepolia.zama.ai'\n  contractAddresses: {\n    CredentialRegistry: import.meta.env.VITE_REGISTRY_ADDRESS,\n    ProtocolAccessControl: import.meta.env.VITE_PROTOCOL_ADDRESS\n  }\n});\n\n// 3. (Optional) Explicitly initialize contracts\nawait sdk.init(provider);`}
+                                code={`import { NoahSDK } from 'noah-protocol';\nimport { ethers } from 'ethers';\n\n// 1. Setup Sepolia Provider\nconst provider = new ethers.BrowserProvider(window.ethereum);\n\n// 2. Initialize with public parameters\nconst sdk = new NoahSDK({\n  rpcUrl: import.meta.env.VITE_SEPOLIA_RPC, \n  contractAddresses: {\n    CredentialRegistry: import.meta.env.VITE_REGISTRY_ADDR,\n    ProtocolAccessControl: import.meta.env.VITE_ACCESS_ADDR\n  }\n});\n\n// 3. Connect to wallet\nsdk.init(provider);`}
                             />
                         </div>
 
-                        <div className="glass" style={{ padding: '1.5rem' }}>
-                            <h4 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>Configuration Options</h4>
-                            <table style={{ width: '100%', fontSize: '0.875rem' }}>
-                                <thead>
-                                    <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                                        <th style={{ padding: '0.5rem' }}>Property</th>
-                                        <th style={{ padding: '0.5rem' }}>Type</th>
-                                        <th style={{ padding: '0.5rem' }}>Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td style={{ padding: '0.5rem', fontFamily: 'var(--font-mono)' }}>provider</td>
-                                        <td style={{ padding: '0.5rem', color: 'var(--text-dim)' }}>EthersProvider</td>
-                                        <td style={{ padding: '0.5rem' }}>The wallet provider for transactions.</td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ padding: '0.5rem', fontFamily: 'var(--font-mono)' }}>rpcUrl</td>
-                                        <td style={{ padding: '0.5rem', color: 'var(--text-dim)' }}>string</td>
-                                        <td style={{ padding: '0.5rem' }}>Your network node endpoint.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div className="glass" style={{ padding: '1.5rem', border: '1px solid var(--primary-subtle)', background: 'rgba(var(--primary-rgb), 0.02)' }}>
+                            <h4 style={{ color: 'var(--primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Shield size={18} /> Secure Issuer Setup (Backend Only)
+                            </h4>
+                            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                                To authorize registration transactions, the **Issuer Private Key** must be configured in a secure Node.js environment. Never expose this key in your frontend build.
+                            </p>
+                            <CodeBlock
+                                label=".env (Backend)"
+                                id="init-backend-v2"
+                                code={`# In your secure server-side environment\nNOAH_ISSUER_PRIVATE_KEY=0x...your_secure_issuer_key\n`}
+                            />
                         </div>
 
                         <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '1.5rem', borderRadius: '1rem', marginTop: '2.5rem' }}>
                             <h4 style={{ color: '#60A5FA', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                <Terminal size={18} /> Pro Tip: Signer Handling
+                                <Terminal size={18} /> Pro Tip: Provider Refresh
                             </h4>
                             <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                                For methods that require a `signer` (like `registerCredential`), we recommend fetching the signer dynamically from the provider right before the call to ensure the user hasn't switched accounts.
+                                If users switch networks in their wallet, remember to re-run `sdk.init(newProvider)` to ensure the SDK remains synchronized with the active Sepolia connection.
                             </p>
                         </div>
                     </motion.div>
@@ -227,39 +217,39 @@ export const SDKDocs: React.FC = () => {
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                         <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>Identity Services</h1>
                         <p style={{ marginBottom: '2rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                            Noah provides two core identity services: client-side OCR extraction and Zero-Knowledge proof generation. These services are designed to maximize privacy by keeping raw identity data on the user's device.
+                            Noah provides two core identity services: client-side OCR extraction and CoFHE identity encryption. These services ensure that raw identity data never leaves the user's device in plaintext.
                         </p>
 
                         <div style={{ marginBottom: '3rem' }}>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>1. Local OCR Extraction</h3>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>1. Local MRZ Extraction</h3>
                             <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                                The `extractPassportData` method uses `tesseract.js` to scan passport photos locally. It extracts the MRZ (Machine Readable Zone) and parses it into structured data.
+                                The `extractPassportData` method scans passport photos locally. It extracts the MRZ (Machine Readable Zone) and parses it into structured data artifacts.
                             </p>
                             <CodeBlock
                                 label="Handle File Upload"
                                 id="ocr-code-v2"
-                                code={`// This happens entirely in the browser\nconst imageFile = e.target.files[0];\nconst extractedData = await sdk.extractPassportData(imageFile);\n\nconsole.log(extractedData.firstName); // "JONATHAN"\nconsole.log(extractedData.passportNumber); // "A2013..."`}
+                                code={`// This happens entirely in the browser\nconst imageFile = e.target.files[0];\nconst mrzData = await sdk.extractPassportData(imageFile);\n\nconsole.log(mrzData.firstName); // "JONATHAN"\nconsole.log(mrzData.age); // 28`}
                             />
                         </div>
 
                         <div>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>2. Identity Proof Generation</h3>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>2. CoFHE Identity Encryption</h3>
                             <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                                Transform raw MRZ data into a ZK proof. This example proves the user is over 18 without revealing their exact birth date to the verifier.
+                                Encrypt identity attributes for the Fhenix Coprocessor. This allows smart contracts to perform private logic on the data without ever seeing the raw values.
                             </p>
                             <CodeBlock
-                                label="Generate ZK Age Proof"
+                                label="Encrypt Age for CoFHE"
                                 id="proof-code-v2"
-                                code={`// 1. Define proof parameters\nconst params = {\n  mrzData: extractedData,\n  minAge: 18,\n  recipientAddress: userWalletAddress\n};\n\n// 2. Generate the proof (this can take 5-10 seconds)\nconst { proof, publicSignals, credentialHash } = await sdk.api.generateAgeProof(params);\n\n// Use these results for on-chain submission\nconsole.log("Proof Hash:", credentialHash);`}
+                                code={`// 1. Prepare credential\nconst credential = { \n  age: mrzData.age \n};\n\n// 2. Encrypt using UserClient\nconst encryptedIdentity = await sdk.user.encryptIdentity(credential);\n\n// Use result for on-chain registration\nconsole.log("Encrypted Blob:", encryptedIdentity.data);`}
                             />
                         </div>
 
                         <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '1.5rem', borderRadius: '1rem', marginTop: '2.5rem' }}>
                             <h4 style={{ color: '#10B981', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                <CheckCircle2 size={18} /> Privacy Guarantee
+                                <CheckCircle2 size={18} /> Privacy First
                             </h4>
                             <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                                Raw MRZ data is used only as a witness for the proof generation and is never stored or transmitted to Noah's servers or the blockchain.
+                                Raw MRZ data is destroyed immediately after encryption. Only the encrypted `inEuint32` struct is submitted to the Sepolia network.
                             </p>
                         </div>
                     </motion.div>
@@ -269,31 +259,98 @@ export const SDKDocs: React.FC = () => {
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                         <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>On-Chain Lifecycle</h1>
                         <p style={{ marginBottom: '2rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                            The final stage of integration involves interacting with the Noah smart contracts. You can check existing verification status and register new credentials using encrypted handles.
+                            Interact with Noah smart contracts on Sepolia to register identities and verify requirements privately using the Fhenix Coprocessor.
                         </p>
 
                         <div style={{ marginBottom: '3rem' }}>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>1. Address-Based Discovery</h3>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>1. Identity Registration</h3>
                             <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                                Always check if a user is already verified when they connect their wallet. This enables the "One-Click KYC" experience.
+                                Register the encrypted identity on-chain. This binds the identity to the user's wallet address using a deterministic nullifier.
                             </p>
                             <CodeBlock
-                                label="Check Registry Status"
+                                label="Register on Sepolia"
                                 id="check-code-v2"
-                                code={`const userAddress = await signer.getAddress();\n\n// Returns bytes32(0) if not found, or the existing hash if found\nconst existingHash = await sdk.contracts.getCredentialByUser(userAddress);\n\nif (existingHash !== ethers.ZeroHash) {\n  console.log("Verified User Detected!", existingHash);\n}`}
+                                code={`const userAddress = await signer.getAddress();\n\n// Returns a transaction result once confirmed\nconst tx = await sdk.user.registerIdentity(userAddress, encryptedIdentity);\n\nconsole.log("Identity Registered!", tx.transactionHash);`}
                             />
                         </div>
 
                         <div>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>2. Final Registration</h3>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>2. Private Requirement Verification</h3>
                             <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                                This method submits the verification to the registry and binds the identity to the user's wallet address permanently.
+                                Protocols can verify if a user meets a requirement (e.g., age &gt; 18) without ever seeing the raw data. This uses FHE permits and unsealing.
                             </p>
                             <CodeBlock
-                                label="On-Chain Submission"
+                                label="Verify Eligibility"
                                 id="submit-code-v2"
-                                code={`try {\n  const tx = await sdk.contracts.registerCredential(signer, credentialHash, userAddress);\n  console.log("Transaction Hash:", tx.transactionHash);\n  \n  // Wait for 1 confirmation\n  await tx.receipt.wait();\n  console.log("Identity Registered Successfully!");\n} catch (e) {\n  // Handle "Credential already exists" if user tries to re-register\n  if (e.message.includes("Credential already exists")) {\n    handleVerifiedFlow();\n  }\n}`}
+                                code={`try {\n  // 1. Specify the protocol contract to verify against\n  const protocolAddress = "0x..."; \n  \n  // 2. Perform FHE verification (Permit + Unseal)\n  const isEligible = await sdk.user.verifyRequirement(protocolAddress);\n  \n  if (isEligible) {\n    console.log("Access Granted!");\n  }\n} catch (e) {\n  console.error("Verification failed", e);\n}`}
                             />
+                        </div>
+                    </motion.div>
+                );
+            case 'pricing':
+                return (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>Pricing & Monetization</h1>
+                        <p style={{ fontSize: '1.125rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '2.5rem' }}>
+                            The Noah Protocol is designed to be self-sustaining. Verification costs are calculated per attribute check, with flexible tiers for growing applications.
+                        </p>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '3rem' }}>
+                            {[
+                                {
+                                    title: "Free Tier",
+                                    price: "$0",
+                                    desc: "10 verifications / mo",
+                                    features: ["Basic MRZ Extraction", "Age Verification", "Discord Support"]
+                                },
+                                {
+                                    title: "Pro Tier",
+                                    price: "$99/mo",
+                                    desc: "Unlimited verifications",
+                                    features: ["Priority CoFHE", "Bulk Proving", "Shared Infrastructure", "Custom Rules"]
+                                },
+                                {
+                                    title: "Enterprise",
+                                    price: "Custom",
+                                    desc: "Volume-based scaling",
+                                    features: ["Dedicated Coprocessor", "Private RPC", "SLA Support", "Advanced Analytics"]
+                                }
+                            ].map((tier, i) => (
+                                <div key={i} className="glass" style={{ 
+                                    padding: '2rem', 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    gap: '1rem',
+                                    border: tier.title === 'Pro Tier' ? '1px solid var(--primary)' : '1px solid var(--border)',
+                                    background: tier.title === 'Pro Tier' ? 'rgba(var(--primary-rgb), 0.05)' : 'rgba(255,255,255,0.02)'
+                                }}>
+                                    <h4 style={{ fontSize: '1.25rem', fontWeight: 800 }}>{tier.title}</h4>
+                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+                                        <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--primary)' }}>{tier.price}</span>
+                                    </div>
+                                    <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>{tier.desc}</p>
+                                    <div style={{ margin: '1rem 0', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {tier.features.map((f, fi) => (
+                                            <div key={fi} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                <CheckCircle2 size={12} className="text-primary" /> {f}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="glass" style={{ padding: '2rem', background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                            <h4 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Layers size={18} className="text-primary" /> Usage-Based Billing
+                            </h4>
+                            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                                For high-volume applications, Noah offers a flat rate of **$0.99 per verification**. Integrated via Razorpay for seamless institutional onboarding.
+                            </p>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <button className="btn btn-primary">Upgrade to Pro</button>
+                                <button className="btn btn-outline">Contact Sales</button>
+                            </div>
                         </div>
                     </motion.div>
                 );
@@ -301,25 +358,25 @@ export const SDKDocs: React.FC = () => {
                 return (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                         <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>API Reference</h1>
-                        <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Comprehensive breakdown of all public SDK methods.</p>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Comprehensive breakdown of the modern Noah SDK interface.</p>
                         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
                             <thead>
                                 <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
                                     <th style={{ padding: '1rem', color: 'var(--text-dim)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Method</th>
                                     <th style={{ padding: '1rem', color: 'var(--text-dim)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Namespace</th>
-                                    <th style={{ padding: '1rem', color: 'var(--text-dim)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Description / Context</th>
+                                    <th style={{ padding: '1rem', color: 'var(--text-dim)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Context / Description</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {[
-                                    { name: "extractPassportData(file)", space: "SDK", context: "Scans MRZ lines from a passport image using local OCR." },
-                                    { name: "init(provider)", space: "SDK", context: "Connects the SDK to an ethers-compatible provider." },
-                                    { name: "getCredentialByUser(addr)", space: "Contracts", context: "Returns existing credential hash for a wallet address." },
-                                    { name: "registerCredential(signer, hash, user)", space: "Contracts", context: "Binds a ZK credential to a wallet on-chain." },
-                                    { name: "generateAgeProof(params)", space: "API", context: "Generates ZK age verification artifacts (WASM)." },
-                                    { name: "hasAccess(protocol, user)", space: "Contracts", context: "Checks if a user can access a specific pool/protocol." },
-                                    { name: "getRequirements(protocol)", space: "Contracts", context: "Fetches KYC rules for a specific protocol." },
-                                    { name: "isCredentialValid(hash)", space: "Contracts", context: "Checks if a specific credential hash is currently active." }
+                                    { name: "extractPassportData(file)", space: "SDK", context: "Scans MRZ lines from a passport image and returns parsed data." },
+                                    { name: "init(provider)", space: "SDK", context: "Connects the SDK to an ethers-compatible Sepolia provider." },
+                                    { name: "user.encryptIdentity(cred)", space: "User", context: "Client-side CoFHE encryption of identity attributes (age)." },
+                                    { name: "user.registerIdentity(addr, data)", space: "User", context: "Binds encrypted identity to a wallet on Sepolia registry." },
+                                    { name: "user.verifyRequirement(protocol)", space: "User", context: "Performs FHE verification (Permit + Unseal) for a protocol." },
+                                    { name: "user.isRegistered(addr?)", space: "User", context: "Checks registration status on the Sepolia FHENoahRegistry." },
+                                    { name: "contracts.getRequirements(protocol)", space: "Contracts", context: "Fetches minAge and status for a specific protocol." },
+                                    { name: "contracts.setRequirements(signer, age)", space: "Contracts", context: "Set protocol access rules (Protocol owners only)." }
                                 ].map((m, i) => (
                                     <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
                                         <td style={{ padding: '1rem', fontFamily: 'var(--font-mono)', color: 'var(--primary)', fontSize: '0.85rem' }}>{m.name}</td>
@@ -331,9 +388,9 @@ export const SDKDocs: React.FC = () => {
                         </table>
 
                         <div style={{ marginTop: '3rem', padding: '2rem', background: 'var(--bg-dark)', borderRadius: '1rem', border: '1px solid var(--border)' }}>
-                            <h4 style={{ marginBottom: '1rem' }}>Need more help?</h4>
+                            <h4 style={{ marginBottom: '1rem' }}>Looking for full examples?</h4>
                             <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                                Check out our full integration demo in `src/components/Demo/IdentityVerification.tsx` for a production-ready example of these methods in action.
+                                Check out the updated boilerplate project on GitHub for end-to-end integration examples on Sepolia.
                             </p>
                             <button className="btn btn-primary">Join Discord Support</button>
                         </div>
