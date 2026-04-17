@@ -10,14 +10,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@zama-fhe/relayer-sdk": "^0.4.1",
+    "@cofhe/sdk": "^0.1.1",
+    "axios": "^1.15.0",
     "ethers": "^6.10.0",
-    "fhevmjs": "^0.6.2",
     "framer-motion": "^12.34.3",
     "lucide-react": "^0.575.0",
-    "noah-protocol": "0.1.2",
+    "noah-protocol": "file:../sdk",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "tesseract.js": "^7.0.0",
+    "viem": "^2.48.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

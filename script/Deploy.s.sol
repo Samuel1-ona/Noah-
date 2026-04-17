@@ -16,7 +16,7 @@ contract DeployScript is Script {
         
         vm.startBroadcast(deployerPrivateKey);
         
-        console.log("=== Noah Deployment on Zama FHEVM ===");
+        console.log("=== Noah Deployment on Fhenix Helium ===");
         
         // 1. Deploy FHE Registry
         console.log("Deploying FHENoahRegistry...");

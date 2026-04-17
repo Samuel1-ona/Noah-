@@ -15,7 +15,7 @@ import {
 
 
 
-import { NoahSDK } from 'noah-protocol';
+import { NoahSDK, UserClient } from 'noah-protocol';
 import { ethers } from 'ethers';
 
 declare global {
@@ -122,9 +122,21 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
     };
 
     const handleNext = async () => {
+        if (!account || !sdk) return;
+
         setIsProcessing(true);
         setError(null);
+
         try {
+            const provider = new ethers.BrowserProvider(window.ethereum as any);
+            const signer = await provider.getSigner();
+            const issuerKey = import.meta.env.VITE_ISSUER_PRIVATE_KEY || import.meta.env.VITE_PRIVATE_KEY;
+            const issuerAddress = issuerKey ? new ethers.Wallet(issuerKey).address : undefined;
+            
+            const userClient = new UserClient(signer, {
+                issuerPrivateKey: issuerKey
+            });
+
             if (currentStep === 'witness') {
                 // Confirm extraction
                 setTimeout(() => {
@@ -132,28 +144,12 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
                     setCurrentStep('proof');
                 }, 1000);
             } else if (currentStep === 'proof') {
-                if (!account || !sdk) throw new Error("Wallet not connected");
-
-                // 1. Initialize FHE Encryption (Client-side)
-                const provider = new ethers.BrowserProvider(window.ethereum as any);
-                const signer = await provider.getSigner();
-
-                // Using UserClient for encryption
-                const { UserClient } = await import('noah-protocol');
-                const userClient = new UserClient(signer);
-
-                // 2. Encrypt Age
-                // IMPORTANT: We authorize the ISSUER address to use this handle
-                // because the issuer will be the one signing the registration transaction.
-                const issuerKey = import.meta.env.VITE_ISSUER_PRIVATE_KEY;
-                if (!issuerKey) throw new Error("Issuer configuration missing (VITE_ISSUER_PRIVATE_KEY)");
-                const issuerWallet = new ethers.Wallet(issuerKey);
-                
+                // 1. Encrypt Age
                 const age = Number(extractedData?.age) || 25;
-                console.log("Encrypting age for FHE (authorized for Issuer)...");
+                console.log("Encrypting age for FHE...");
                 const result = await userClient.encryptIdentity({ 
                     age,
-                    userAddress: issuerWallet.address 
+                    userAddress: issuerAddress
                 });
 
                 setFheInput(result);
@@ -162,27 +158,20 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
             } else if (currentStep === 'submit') {
                 if (!account || !sdk || !fheInput) throw new Error("Missing data or connection");
 
-                const provider = new ethers.BrowserProvider(window.ethereum as any);
-
-                console.log("Submitting transaction to register identity on FHEVM (signed by Issuer)...");
                 try {
-                    // Use a dedicated issuer wallet to sign the transaction (Simulation of backend/relayer)
-                    const issuerKey = import.meta.env.VITE_ISSUER_PRIVATE_KEY;
-                    if (!issuerKey) throw new Error("Issuer configuration missing (VITE_ISSUER_PRIVATE_KEY)");
-                    
-                    const issuerWallet = new ethers.Wallet(issuerKey, provider);
-                    
-                    // Generate a deterministic nullifier from the passport number to prevent sybil registrations
-                    // In a production system, this would be hash(passportNumber + system_salt)
-                    const identityId = extractedData?.passportNumber || account; // Fallback to account only if OCR fails
-                    const nullifier = ethers.id(identityId + "_identity_v1");
-
-                    const result = await sdk.contracts.registerIdentity(
-                        issuerWallet,
+                    // Step 3: Registration logic correctly identifying the issuer vs recipient
+                    console.log("Registering identity on Sepolia (Signed by Issuer Manager)...");
+                    console.log("DEBUG - userClient state:", { 
+                        hasSigner: !!(userClient as any).signer, 
+                        isRegisterFunction: typeof userClient.registerIdentity === 'function',
                         account,
-                        nullifier,
-                        fheInput.handle,
-                        fheInput.inputProof
+                        hasFheInput: !!fheInput,
+                        fheInputData: fheInput?.data
+                    });
+                    
+                    const result = await userClient.registerIdentity(
+                        account,
+                        { data: fheInput.data, success: true }
                     );
                     setTxHash(result.transactionHash);
 
@@ -207,35 +196,22 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
         if (!account || !sdk) return;
         setAccessStatus('requesting');
         try {
+            // 1. Initialize UserClient (signer is user)
             const provider = new ethers.BrowserProvider(window.ethereum as any);
             const signer = await provider.getSigner();
+            const userClient = new UserClient(signer);
 
-            // 1. Request access
-            console.log("Requesting access verification from Protocol contract...");
-            const result = await sdk.contracts.requestAccessVerification(signer, account);
-            console.log("Access request submitted:", result.transactionHash);
-
-            // 2. Set to pending
-            setAccessStatus('pending');
-
-            // 3. Start polling for result (Simulation of async callback)
-            const pollInterval = setInterval(async () => {
-                try {
-                    console.log("Polling for decryption result...");
-                    const hasAccess = await sdk.contracts.hasAccess(protocolAddress, account);
-
-                    if (hasAccess) {
-                        setAccessStatus('granted');
-                        clearInterval(pollInterval);
-                    }
-                } catch (err) {
-                    console.error("Poll error:", err);
-                }
-            }, 5000);
-
-            // Timeout after 60s
-            setTimeout(() => clearInterval(pollInterval), 60000);
-
+            // 2. High-level verification (Handles Permit + Verify + Unseal in one call)
+            console.log("Starting high-level CoFHE verification flow...");
+            const hasAccess = await userClient.verifyRequirement(sdk.contracts.getContractAddresses().ProtocolAccessControl);
+            
+            setAccessStatus('pending'); // Momentary state for unsealing
+            
+            if (hasAccess) {
+                setAccessStatus('granted');
+            } else {
+                setAccessStatus('denied');
+            }
         } catch (err) {
             console.error("Access request failed:", err);
             setAccessStatus('none');
@@ -363,8 +339,8 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ marginBottom: '2.5rem' }}>
                             <Cpu size={64} className={isProcessing ? "animate-pulse" : ""} style={{ color: 'var(--primary)', marginBottom: '1.5rem' }} />
-                            <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>FHE Encryption</h3>
-                            <p style={{ color: 'var(--text-muted)' }}>Encrypting age with Zama's FHEVM for confidential verification...</p>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>FHE Encryption (CoFHE)</h3>
+                            <p style={{ color: 'var(--text-muted)' }}>Encrypting age with Fhenix Coprocessor for confidential verification on Sepolia...</p>
                         </div>
                         {isProcessing ? (
                             <div style={{ width: '100%', height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
@@ -397,7 +373,7 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
                                         <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>Wrong Network Connected</span>
                                     </div>
                                     <button onClick={onSwitchNetwork} className="btn btn-primary" style={{ width: '100%', background: '#EF4444', border: 'none' }}>
-                                        Switch to Zama Devnet
+                                        Switch to Sepolia
                                     </button>
                                 </div>
                             ) : (
@@ -462,9 +438,18 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
                         <button className="btn btn-primary" onClick={() => setCurrentStep('access')} style={{ width: '100%', marginBottom: '1rem' }}>
                             Test Protocol Access
                         </button>
-                        <button className="btn btn-outline" onClick={reset} style={{ width: '100%' }}>
+                        <button className="btn btn-outline" onClick={reset} style={{ width: '100%', marginBottom: '1.5rem' }}>
                             Done
                         </button>
+                        <div style={{ padding: '1rem', borderTop: '1px solid var(--border)' }}>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>Testing another account?</p>
+                            <button 
+                                onClick={reset}
+                                style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }}
+                            >
+                                Reset Verification State
+                            </button>
+                        </div>
                     </div>
 
                 );
@@ -490,8 +475,8 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
                                 <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>Status</p>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                     {accessStatus === 'none' && <span style={{ color: 'var(--text-muted)' }}>Idle</span>}
-                                    {accessStatus === 'requesting' && <><Loader2 size={16} className="animate-spin text-primary" /> <span>Submitting...</span></>}
-                                    {accessStatus === 'pending' && <><Loader2 size={16} className="animate-spin text-primary" /> <span>Waiting for KMS Decryption...</span></>}
+                                    {accessStatus === 'requesting' && <><Loader2 size={16} className="animate-spin text-primary" /> <span>Signing Permit...</span></>}
+                                    {accessStatus === 'pending' && <><Loader2 size={16} className="animate-spin text-primary" /> <span>Unsealing Confidential Result...</span></>}
                                     {accessStatus === 'granted' && <><CheckCircle2 size={16} style={{ color: '#22C55E' }} /> <span style={{ color: '#22C55E', fontWeight: 600 }}>Access Granted</span></>}
                                 </div>
                             </div>
