@@ -42,6 +42,7 @@ export {
 export {
   parseTD3,
   validateCheckDigit,
+  validateCheckDigitWithRepair,
 } from './utils/mrz.js';
 export type { MRZData } from './utils/mrz.js';
 
