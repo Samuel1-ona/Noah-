@@ -10,13 +10,13 @@ export const ProcessFlow: React.FC = () => {
         },
         {
             icon: <Cpu size={32} />,
-            title: "02. Generate ZK Proof",
-            description: "The SDK generates a Zero-Knowledge proof of your identity in your browser."
+            title: "02. CoFHE Encryption",
+            description: "Identity attributes are encrypted client-side using FHE, making them computable but private."
         },
         {
             icon: <CheckCircle size={32} />,
-            title: "03. Verified Identity",
-            description: "Protocols verify the proof and grant access instantly."
+            title: "03. Confidential Verification",
+            description: "The Fhenix Coprocessor verifies your eligibility on-chain without ever seeing your data."
         }
     ];
 

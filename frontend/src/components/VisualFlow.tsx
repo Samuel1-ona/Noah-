@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Fingerprint, CreditCard, MapPin, Landmark, ShieldCheck, Lock, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Fingerprint, CreditCard, MapPin, Landmark, ShieldCheck, Lock, CheckCircle2, ArrowRight, Cpu, Shield } from 'lucide-react';
 
 interface FlowNodeProps {
     icon: React.ReactNode;
@@ -47,9 +47,9 @@ export const VisualFlow: React.FC = () => {
 
                 {/* Left: Inputs */}
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <FlowNode icon={<CreditCard size={20} />} label="ID Card" type="input" delay={0.1} />
-                    <FlowNode icon={<MapPin size={20} />} label="Location" type="input" delay={0.3} />
-                    <FlowNode icon={<Landmark size={20} />} label="Bank Account" type="input" delay={0.5} />
+                    <FlowNode icon={<CreditCard size={20} />} label="Passport MRZ" type="input" delay={0.1} />
+                    <FlowNode icon={<MapPin size={20} />} label="Nationality" type="input" delay={0.3} />
+                    <FlowNode icon={<Lock size={20} />} label="Private Attributes" type="input" delay={0.5} />
                 </div>
 
                 {/* Arrow Left */}
@@ -61,7 +61,7 @@ export const VisualFlow: React.FC = () => {
                     <ArrowRight size={32} />
                 </motion.div>
 
-                {/* Center: ZK Engine */}
+                {/* Center: CoFHE Engine */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     whileInView={{ opacity: 1, scale: 1 }}
@@ -78,20 +78,20 @@ export const VisualFlow: React.FC = () => {
                         background: 'rgba(5, 5, 5, 0.6)',
                         position: 'relative',
                         overflow: 'hidden',
-                        border: '1px solid rgba(255, 255, 255, 0.08)'
+                        border: '1px solid rgba(var(--primary-rgb), 0.15)'
                     }}
                 >
                     {/* Pulsing Ripple Effect */}
                     <motion.div
                         animate={{
-                            scale: [1, 1.2, 1],
-                            opacity: [0.1, 0.2, 0.1]
+                            scale: [1, 1.3, 1],
+                            opacity: [0.1, 0.3, 0.1]
                         }}
-                        transition={{ duration: 3, repeat: Infinity }}
+                        transition={{ duration: 4, repeat: Infinity }}
                         style={{
                             position: 'absolute',
-                            width: '180px',
-                            height: '180px',
+                            width: '200px',
+                            height: '200px',
                             borderRadius: '50%',
                             background: 'radial-gradient(circle, var(--primary) 0%, transparent 70%)',
                             zIndex: 0
@@ -99,15 +99,24 @@ export const VisualFlow: React.FC = () => {
                     />
 
                     <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-                        <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                            style={{ padding: '1rem', marginBottom: '1rem', display: 'inline-block' }}
-                        >
-                            <Fingerprint size={64} style={{ color: '#3B82F6' }} />
-                        </motion.div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>ZK Proof</h3>
-                        <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '0.5rem' }}>Zero-Knowledge Circuit</p>
+                        <div style={{ position: 'relative', marginBottom: '1.5rem', display: 'inline-block' }}>
+                            <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                            >
+                                <Cpu size={64} style={{ color: 'var(--primary)', opacity: 0.8 }} />
+                            </motion.div>
+                            <motion.div
+                                initial={{ scale: 0.8 }}
+                                animate={{ scale: [0.8, 1.1, 0.8] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                                style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'var(--bg-dark)', borderRadius: '50%', padding: '0.25rem' }}
+                            >
+                                <Lock size={24} style={{ color: '#10B981' }} />
+                            </motion.div>
+                        </div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>CoFHE Engine</h3>
+                        <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: '0.5rem' }}>Confidential FHE Computation</p>
                     </div>
                 </motion.div>
 
