@@ -80,15 +80,15 @@ export const PitchDeck: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             icon: <Zap size={48} style={{ color: 'var(--primary)' }} />,
             content: (
                 <div style={{ textAlign: 'center' }}>
-                    <h3 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '2rem' }}>The Zero-Knowledge Identity Layer</h3>
+                    <h3 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '2rem' }}>The Confidential Identity Layer</h3>
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '3rem', flexWrap: 'wrap' }}>
                         <div style={{ width: '200px' }}>
                             <div style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.5rem' }}>100%</div>
-                            <p style={{ fontSize: '0.875rem' }}>Private On-Chain</p>
+                            <p style={{ fontSize: '0.875rem' }}>Confidential On-Chain</p>
                         </div>
                         <div style={{ width: '200px' }}>
-                            <div style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.5rem' }}>0s</div>
-                            <p style={{ fontSize: '0.875rem' }}>Latency Reuse</p>
+                            <div style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.5rem' }}>50k</div>
+                            <p style={{ fontSize: '0.875rem' }}>Gas Efficiency</p>
                         </div>
                         <div style={{ width: '200px' }}>
                             <div style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.5rem' }}>ZERO</div>
@@ -96,7 +96,7 @@ export const PitchDeck: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         </div>
                     </div>
                     <p style={{ marginTop: '3rem', color: 'var(--text-muted)', maxWidth: '700px', margin: '3rem auto 0', lineHeight: 1.6 }}>
-                        Noah uses ZK-Proofs to decouple "Verification" from "Identity". Protocols get the signal (e.g., "User is {'>'} 18") without ever knowing who the user is.
+                        Noah uses **Confidential FHE (CoFHE)** on the Fhenix Coprocessor to enable private computation. Protocols get the verified result (e.g., "User is &gt; 18") without ever identifying the user.
                     </p>
                 </div>
             )
@@ -114,13 +114,13 @@ export const PitchDeck: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     </div>
                     <ArrowRight className="text-dim" />
                     <div className="glass" style={{ width: '30%', padding: '1.5rem', textAlign: 'center', border: '2px solid var(--primary)' }}>
-                        <h4 style={{ marginBottom: '0.5rem' }}>2. Gnark Prover</h4>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>WASM-based ZK-Proof generation (Groth16).</p>
+                        <h4 style={{ marginBottom: '0.5rem' }}>2. CoFHE Encryption</h4>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Identity attributes encrypted via SDK for Fhenix.</p>
                     </div>
                     <ArrowRight className="text-dim" />
                     <div className="glass" style={{ width: '25%', padding: '1.5rem', textAlign: 'center' }}>
-                        <h4 style={{ marginBottom: '0.5rem' }}>3. Network</h4>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>On-chain verification and access grant.</p>
+                        <h4 style={{ marginBottom: '0.5rem' }}>3. Coprocessor</h4>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Confidential execution on Ethereum Sepolia.</p>
                     </div>
                 </div>
             )
@@ -168,8 +168,8 @@ export const PitchDeck: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         <li style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                             <div style={{ minWidth: '24px', height: '24px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem' }}>✓</div>
                             <div>
-                                <strong>Low Gas Overhead</strong>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Optimized ZK-Verifiers on EVM keep verification costs under 50k Gas.</p>
+                                <strong>FHE Permitting</strong>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Users grant access to specific attributes without unsealing their entire identity.</p>
                             </div>
                         </li>
                         <li style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
