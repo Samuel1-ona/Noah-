@@ -51,9 +51,12 @@ export interface UseUserReturn {
     reset: () => void;
   };
 
-  requestAccessVerification: {
-    mutate: (userAddress?: string) => void;
-    mutateAsync: (userAddress?: string) => Promise<TransactionResult>;
+  /**
+   * CoFHE: High-level verification flow
+   */
+  verifyRequirement: {
+    mutate: (protocolAddress: string) => void;
+    mutateAsync: (protocolAddress: string) => Promise<boolean>;
     isLoading: boolean;
     error: Error | null;
     reset: () => void;
@@ -61,7 +64,7 @@ export interface UseUserReturn {
 }
 
 /**
- * React hook for user operations (FHE version)
+ * React hook for user operations (CoFHE version)
  */
 export function useUser(
   signer: Signer | null | undefined,
@@ -132,11 +135,11 @@ export function useUser(
     },
   });
 
-  // Mutation: Request access
-  const requestAccessMutation = useMutation({
-    mutationFn: async (userAddress?: string) => {
+  // Mutation: Verify Requirement (CoFHE Async/Permit flow)
+  const verifyRequirementMutation = useMutation({
+    mutationFn: async (targetProtocol: string) => {
       if (!user) throw new Error('User client missing');
-      return user.requestAccessVerification(userAddress);
+      return user.verifyRequirement(targetProtocol);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['protocol', 'access'] });
@@ -167,12 +170,12 @@ export function useUser(
       error: registerIdentityMutation.error as Error | null,
       reset: registerIdentityMutation.reset,
     },
-    requestAccessVerification: {
-      mutate: requestAccessMutation.mutate,
-      mutateAsync: requestAccessMutation.mutateAsync,
-      isLoading: requestAccessMutation.isPending,
-      error: requestAccessMutation.error as Error | null,
-      reset: requestAccessMutation.reset,
+    verifyRequirement: {
+      mutate: verifyRequirementMutation.mutate,
+      mutateAsync: verifyRequirementMutation.mutateAsync,
+      isLoading: verifyRequirementMutation.isPending,
+      error: verifyRequirementMutation.error as Error | null,
+      reset: verifyRequirementMutation.reset,
     },
   };
 }

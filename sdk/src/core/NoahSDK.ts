@@ -103,8 +103,7 @@ export class NoahSDK {
                 signer,
                 userAddress,
                 finalNullifier,
-                encryptionResult.handle,
-                encryptionResult.inputProof
+                { data: encryptionResult.data }
             );
         } catch (error) {
             if (error instanceof NoahError) throw error;

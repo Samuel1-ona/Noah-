@@ -18,7 +18,7 @@ const PROTOCOL_ACCESS_CONTROL_ABI = [
   'event RequirementsSet(address indexed protocol, uint32 minAge)',
 ] as const;
 
-const DEFAULT_PROTOCOL_ACCESS_CONTROL_ADDRESS = '0xb92f19431617F5B34bFDCb06E3a80533939DD71b';
+const DEFAULT_PROTOCOL_ACCESS_CONTROL_ADDRESS = '0x503De26148ACa67Aa97E12eC545B22e7216f1BE4';
 
 /**
  * ProtocolClient - High-level API for DeFi protocol integration

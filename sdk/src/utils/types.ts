@@ -123,11 +123,10 @@ export type EventCallback<T = any> = (
 export type ContractEventPayload = EventLog | Log;
 
 /**
- * FHE Input structure for encrypted data
+ * FHE Input structure for encrypted data on Fhenix
  */
 export interface FHEInput {
-  handle: string; // bytes32 handle
-  inputProof: string; // bytes proof
+  data: string; // The encrypted data + proof (bytes)
 }
 
 /**

@@ -10,15 +10,14 @@ import { IdentityManager } from '../utils/identity';
 export interface Credential {
   age: number;
   userAddress?: string;
-  nullifier?: string; // Optional: can be generated from PII
+  nullifier?: string; 
 }
 
 /**
- * FHE Input result
+ * FHE Input result for Fhenix
  */
 export interface FHEInputResult {
-  handle: string;
-  inputProof: string;
+  data: string;
   success: boolean;
 }
 
@@ -28,18 +27,18 @@ export interface FHEInputResult {
 export interface UserClientConfig {
   contractAddresses?: Partial<ContractAddresses>;
   rpcUrl?: string;
-  mockMode?: boolean;
+  issuerPrivateKey?: string;
 }
 
 /**
- * UserClient - High-level API for end-user applications
+ * UserClient - High-level API for end-user applications on CoFHE (Sepolia)
  */
 export class UserClient {
   private signer: Signer;
   private contractClient: ContractClient;
   private fheEncryptor: FHEEncryptor;
-  private mockMode: boolean;
   private identityManager: IdentityManager;
+  private issuerPrivateKey?: string;
 
   constructor(signer: Signer, config: UserClientConfig = {}) {
     if (!signer) {
@@ -47,7 +46,7 @@ export class UserClient {
     }
 
     this.signer = signer;
-    this.mockMode = config.mockMode || false;
+    this.issuerPrivateKey = config.issuerPrivateKey;
 
     this.contractClient = new ContractClient({
       provider: signer.provider || undefined,
@@ -60,82 +59,93 @@ export class UserClient {
   }
 
   /**
-   * Encrypt user identity attributes using FHE
+   * Encrypt user identity attributes using FHE on CoFHE
    */
-  async encryptIdentity(
-    credential: Credential
-  ): Promise<FHEInputResult> {
-    if (this.mockMode) {
-      const mockResult = await this.fheEncryptor.mockEncryptAge(credential.age);
-      return { ...mockResult, success: true };
+    async encryptIdentity(credential: Credential): Promise<FHEInputResult> {
+        try {
+            await this.fheEncryptor.initialize(this.signer.provider);
+            const result = await this.fheEncryptor.encryptAge(credential.age);
+            
+            console.log(`[UserClient] FHE identity encrypted successfully.`);
+
+            return {
+                data: result, // This is now the full {ctHash, utype, securityZone, signature} object
+                success: true,
+            };
+        }
+        catch (error: any) {
+            console.error("[UserClient] encryptIdentity error:", error);
+            throw new Error(`Failed to encrypt identity: ${error.message || 'Unknown error'}`);
+        }
     }
 
-    try {
-      await this.fheEncryptor.initialize(
-        '', // Use SepoliaConfig defaults — Zama's official KMS contract
-        '', // Use SepoliaConfig defaults — Zama's official ACL contract
-        this.signer.provider
-      );
+    /**
+     * Register identity on-chain with encrypted age and deterministic nullifier
+     */
+    async registerIdentity(
+        userAddress: string,
+        fheInput: FHEInputResult,
+        nullifier?: string
+    ): Promise<TransactionResult> {
+        try {
+            console.log(`[UserClient] registerIdentity for ${userAddress}`);
+            
+            // Use SDK's deterministic nullifier if none provided
+            const finalNullifier = nullifier || this.fheEncryptor.generateNullifier(userAddress);
+            console.log(`[UserClient] Using nullifier: ${finalNullifier}`);
 
+            // If an issuer key is configured, use it to sign the transaction
+            // This satisfies the 'onlyIssuer' requirement on the contract
+            let signingSigner = this.signer;
+            if (this.issuerPrivateKey) {
+                console.log(`[UserClient] Signing with Issuer Manager private key...`);
+                // Ensure we pass the provider to the new Wallet instance
+                const provider = this.signer.provider;
+                if (!provider) {
+                    console.warn("[UserClient] Signer has no provider. Issuer Wallet will be created without provider.");
+                }
+                signingSigner = new ethers.Wallet(this.issuerPrivateKey, provider || undefined);
+            }
+            else {
+                console.log(`[UserClient] Signing with user's primary signer...`);
+            }
 
-      const userAddress = credential.userAddress || (await this.signer.getAddress());
-      const registryAddress = this.contractClient.getContractAddresses().CredentialRegistry;
-
-      const result = await this.fheEncryptor.encryptAge(credential.age, userAddress, registryAddress);
-
-
-      return {
-        handle: result.handle,
-        inputProof: result.inputProof,
-        success: true,
-      };
-    } catch (error: any) {
-      throw new Error(`Failed to encrypt identity: ${error.message || 'Unknown error'}`);
+            // Pass the entire data object (struct) to the contract client
+            return await this.contractClient.registerIdentity(
+                signingSigner,
+                userAddress,
+                finalNullifier,
+                fheInput.data 
+            );
+        }
+        catch (error: any) {
+            console.error(`[UserClient] Registration error:`, error);
+            throw new Error(`Failed to register identity: ${error.message || 'Unknown error'}`);
+        }
     }
-  }
 
   /**
-   * Register identity on-chain with encrypted age
+   * High-level verification flow for protocols (Permits + Unsealing)
    */
-  async registerIdentity(
-    userAddress: string,
-    fheInput: FHEInputResult,
-    nullifier?: string
-  ): Promise<TransactionResult> {
-    try {
-      // If no nullifier provided, generate a deterministic one for demo purposes
-      // In production, this would be hash(PassportNumber + Salt)
-      const finalNullifier = nullifier || ethers.id(userAddress + "_identity_v1");
-
-      return await this.contractClient.registerIdentity(
-        this.signer,
-        userAddress,
-        finalNullifier,
-        fheInput.handle,
-        fheInput.inputProof
-      );
-    } catch (error: any) {
-      throw new Error(`Failed to register identity: ${error.message || 'Unknown error'}`);
-    }
-  }
-
-  /**
-   * Request access verification for a protocol
-   */
-  async requestAccessVerification(
+  async verifyRequirement(
+    protocolAddress: string,
     userAddress?: string
-  ): Promise<TransactionResult> {
+  ): Promise<boolean> {
     const finalUserAddress = userAddress || (await this.signer.getAddress());
 
     try {
-      return await this.contractClient.requestAccessVerification(
-        this.signer,
-        finalUserAddress
-      );
+      await this.fheEncryptor.initialize(this.signer.provider);
+      
+      // 1. Generate Permit for the protocol contract
+      const permit = await this.fheEncryptor.getPermission(protocolAddress);
+      
+      // 2. Query the contract for a sealed result
+      const sealedResult = await this.contractClient.verifyAccess(finalUserAddress, permit);
+      
+      // 3. Unseal the result off-chain
+      return await this.fheEncryptor.unseal(permit, sealedResult);
     } catch (error: any) {
-      throw new Error(
-        `Failed to request access verification: ${error.message || 'Unknown error'}`
-      );
+      throw new Error(`Failed to verify requirement: ${error.message || 'Unknown error'}`);
     }
   }
 
@@ -144,44 +154,13 @@ export class UserClient {
    */
   async isRegistered(userAddress?: string): Promise<boolean> {
     const finalUserAddress = userAddress || (await this.signer.getAddress());
-
-    try {
-      return await this.contractClient.isRegistered(finalUserAddress);
-    } catch (error: any) {
-      throw new Error(
-        `Failed to check registration status: ${error.message || 'Unknown error'}`
-      );
-    }
+    return await this.contractClient.isRegistered(finalUserAddress);
   }
 
   /**
    * Get protocol requirements
    */
   async getProtocolRequirements(protocolAddress: string): Promise<Requirements> {
-    try {
-      return await this.contractClient.getRequirements(protocolAddress);
-    } catch (error: any) {
-      throw new Error(
-        `Failed to get protocol requirements: ${error.message || 'Unknown error'}`
-      );
-    }
-  }
-
-  /**
-   * Check if user has access to a protocol
-   */
-  async hasAccess(
-    protocolAddress: string,
-    userAddress?: string
-  ): Promise<boolean> {
-    const finalUserAddress = userAddress || (await this.signer.getAddress());
-
-    try {
-      return await this.contractClient.hasAccess(protocolAddress, finalUserAddress);
-    } catch (error: any) {
-      throw new Error(
-        `Failed to check access: ${error.message || 'Unknown error'}`
-      );
-    }
+    return await this.contractClient.getRequirements(protocolAddress);
   }
 }

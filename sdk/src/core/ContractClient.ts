@@ -11,39 +11,37 @@ import {
 import type {
   ContractAddresses,
   Requirements,
-  IssuerInfo,
-  Proof,
-  ZKProof,
   TransactionResult,
   ContractClientConfig,
-  EventCallback
 } from '../utils/types.js';
 
 /**
- * Contract ABIs (synchronized with production contracts)
+ * Contract ABIs - Updated for CoFHE (Sepolia) and Sybil Resistance
  */
 const CREDENTIAL_REGISTRY_ABI = [
   'function isRegistered(address) view returns (bool)',
   'function trustedIssuers(address) view returns (bool)',
-  'function registerIdentity(address user, bytes32 nullifier, bytes32 ageHandle, bytes ageProof)',
+  'function registerIdentity(address user, bytes32 nullifier, (uint256 ctHash, uint256 utype, uint256 securityZone, bytes signature) ageInput)',
   'function identityNullifiers(bytes32) view returns (address)',
-  'function getEncryptedAge(address user) view returns (uint256)',
+  'function addressToNullifiers(address) view returns (bytes32)',
+  'function getEncryptedAge(address user) view returns ((uint256 ctHash, uint256 utype, uint256 securityZone, bytes signature))',
+  'function getSealedAge(address user, bytes32 publicKey) view returns (string)',
   'function addIssuer(address issuer, string memory name)',
   'event IdentityRegistered(address indexed user, address indexed issuer)',
   'event IssuerAdded(address indexed issuer, string name)',
 ] as const;
 
 const PROTOCOL_ACCESS_CONTROL_ABI = [
-  'function hasAccess(address protocol, address user) view returns (bool)',
+  'function verifyAccessSealed(address user, (bytes32 publicKey, bytes signature) permission) view returns (string)',
   'function protocolRequirements(address) view returns (uint32 minAge, bool isSet)',
   'function setRequirements(uint32 minAge)',
-  'function requestAccessVerification(address user) external',
-  'function callbackAccess(uint256 requestId, bool result)',
+  'event RequirementsSet(address indexed protocol, uint32 minAge)',
+  'event AccessVerified(address indexed protocol, address indexed user)',
 ] as const;
 
 /**
  * Contract Client Service
- * Handles direct smart contract interactions for read and write operations
+ * Handles direct smart contract interactions for read and write operations on Sepolia
  */
 export class ContractClient {
 
@@ -53,38 +51,26 @@ export class ContractClient {
   private contractAddresses: ContractAddresses;
   private rpcUrl: string;
 
-  /**
-   * Create a new ContractClient instance
-   * @param config - Configuration options including provider, contract addresses, and RPC URL
-   */
   constructor(config?: ContractClientConfig) {
     this.contractAddresses = {
-      CredentialRegistry: config?.contractAddresses?.CredentialRegistry || "0x4C950CA3857f691443dADD0882dc015E656Ae2AA",
+      CredentialRegistry: config?.contractAddresses?.CredentialRegistry || "0xd6ACEA76AAF465559Ff9F287b4F883f18368325B",
       ZKVerifier: config?.contractAddresses?.ZKVerifier || '0x0000000000000000000000000000000000000000',
-      ProtocolAccessControl: config?.contractAddresses?.ProtocolAccessControl || "0xDc218b412EE84D459Cdc962A1285746B843c508E",
+      ProtocolAccessControl: config?.contractAddresses?.ProtocolAccessControl || "0x503De26148ACa67Aa97E12eC545B22e7216f1BE4",
     };
 
-
-    this.rpcUrl = config?.rpcUrl || 'https://ethereum-sepolia-rpc.publicnode.com';
-
+    this.rpcUrl = config?.rpcUrl || 'https://ethereum-sepolia.publicnode.com';
 
     if (config?.provider) {
       this.initialize(config.provider);
     }
   }
 
-  /**
-   * Initialize provider and contracts with robust support for various provider types
-   * @param inputProvider - EIP-1193 provider (window.ethereum), Ethers Provider, or custom
-   */
   initialize(inputProvider?: any): void {
     if (!inputProvider) {
       this.provider = new JsonRpcProvider(this.rpcUrl);
     } else if (inputProvider.request) {
-      // It's an EIP-1193 provider (MetaMask, etc.)
       this.provider = new BrowserProvider(inputProvider as Eip1193Provider);
     } else {
-      // Assume it's already an ethers-compatible provider
       this.provider = inputProvider as Provider;
     }
 
@@ -102,63 +88,68 @@ export class ContractClient {
 
   async isRegistered(userAddress: string): Promise<boolean> {
     if (!this.credentialRegistry) this.initialize();
-    try {
-      return await this.credentialRegistry!.isRegistered(userAddress);
-    } catch (error) {
-      throw new Error(`Failed to check registration status: ${error}`);
-    }
+    return await this.credentialRegistry!.isRegistered(userAddress);
   }
 
-  async getEncryptedAge(userAddress: string): Promise<bigint> {
-    if (!this.credentialRegistry) this.initialize();
-    try {
-      return await this.credentialRegistry!.getEncryptedAge(userAddress);
-    } catch (error) {
-      throw new Error(`Failed to get encrypted age: ${error}`);
-    }
-  }
-
-  async hasAccess(protocolAddress: string, userAddress: string): Promise<boolean> {
+  /**
+   * CoFHE: Verify access using a permit and sealed output
+   */
+  async verifyAccess(userAddress: string, permission: any): Promise<string> {
     if (!this.protocolAccessControl) this.initialize();
     try {
-      return await this.protocolAccessControl!.hasAccess(protocolAddress, userAddress);
+      // Correcting method call to match new ABI
+      return await this.protocolAccessControl!.verifyAccessSealed(userAddress, permission);
     } catch (error) {
-      throw new Error(`Failed to check access: ${error}`);
+      throw new Error(`Failed to verify access: ${error}`);
     }
   }
 
   async getRequirements(protocolAddress: string): Promise<Requirements> {
     if (!this.protocolAccessControl) this.initialize();
-    try {
-      const [minAge, isSet] =
-        await this.protocolAccessControl!.protocolRequirements(protocolAddress);
-
-      return {
-        minAge: Number(minAge),
-        allowedJurisdictions: [],
-        requireAccredited: false,
-        isSet,
-      };
-    } catch (error) {
-      throw new Error(`Failed to get protocol requirements: ${error}`);
-    }
+    const [minAge, isSet] = await this.protocolAccessControl!.protocolRequirements(protocolAddress);
+    return {
+      minAge: Number(minAge),
+      allowedJurisdictions: [],
+      requireAccredited: false,
+      isSet,
+    };
   }
 
   async registerIdentity(
     signer: Signer,
     userAddress: string,
     nullifier: string,
-    ageHandle: string,
-    ageProof: string
+    ageInput: any
   ): Promise<TransactionResult> {
-    if (!signer) throw new Error('Signer is required');
+    console.log(`[ContractClient] registerIdentity called for ${userAddress}`);
+    
+    if (!signer.provider) {
+      console.warn("[ContractClient] Signer has no provider. Attempting to use default provider.");
+    }
+
     const contract = new ethers.Contract(this.contractAddresses.CredentialRegistry, CREDENTIAL_REGISTRY_ABI, signer);
+    
+    if (typeof contract.registerIdentity !== 'function') {
+      throw new Error(`[ContractClient] registerIdentity is not a function on the contract. ABI mismatch? Address: ${this.contractAddresses.CredentialRegistry}`);
+    }
+
     try {
-      const tx = await contract.registerIdentity(userAddress, nullifier, ageHandle, ageProof) as ContractTransactionResponse;
+      console.log(`[ContractClient] Sending registerIdentity transaction...`);
+      console.log(`[ContractClient] Args: user=${userAddress}, nullifier=${nullifier}, hasAgeInput=${!!ageInput}`);
+      const tx = await contract.registerIdentity(userAddress, nullifier, ageInput);
+      
+      if (!tx) {
+        throw new Error("[ContractClient] Transaction response was undefined. This might happen if the signer/provider is not correctly configured.");
+      }
+
+      console.log(`[ContractClient] Transaction sent: ${tx.hash}. Waiting for receipt...`);
       const receipt = await tx.wait();
+      
+      console.log(`[ContractClient] Transaction confirmed in block ${receipt.blockNumber}`);
       return { transactionHash: tx.hash, receipt };
-    } catch (error) {
-      throw new Error(`Failed to register identity: ${error}`);
+    } catch (error: any) {
+      console.error("[ContractClient] Error in registerIdentity:", error);
+      throw error;
     }
   }
 
@@ -166,34 +157,12 @@ export class ContractClient {
     signer: Signer,
     minAge: number
   ): Promise<TransactionResult> {
-    if (!signer) throw new Error('Signer is required');
     const contract = new ethers.Contract(this.contractAddresses.ProtocolAccessControl, PROTOCOL_ACCESS_CONTROL_ABI, signer);
-    try {
-      const tx = await contract.setRequirements(minAge) as ContractTransactionResponse;
-      const receipt = await tx.wait();
-      return { transactionHash: tx.hash, receipt };
-    } catch (error) {
-      throw new Error(`Failed to set requirements: ${error}`);
-    }
-  }
-
-  async requestAccessVerification(
-    signer: Signer,
-    userAddress: string
-  ): Promise<TransactionResult> {
-    if (!signer) throw new Error('Signer is required');
-    const contract = new ethers.Contract(this.contractAddresses.ProtocolAccessControl, PROTOCOL_ACCESS_CONTROL_ABI, signer);
-    try {
-      const tx = await contract.requestAccessVerification(userAddress) as ContractTransactionResponse;
-      const receipt = await tx.wait();
-      return { transactionHash: tx.hash, receipt };
-    } catch (error) {
-      throw new Error(`Failed to request access verification: ${error}`);
-    }
+    const tx = await contract.setRequirements(minAge) as ContractTransactionResponse;
+    const receipt = await tx.wait();
+    return { transactionHash: tx.hash, receipt };
   }
 
   getContractAddresses(): ContractAddresses { return this.contractAddresses; }
   getProvider(): Provider | null { return this.provider; }
-
 }
-
