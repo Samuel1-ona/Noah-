@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.25;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {FHE, euint32, externalEuint32} from "@fhevm/solidity/lib/FHE.sol";
-import {ZamaEthereumConfig, ZamaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+
+// Define the struct locally to avoid Fhenix library dependencies on Sepolia
+struct inEuint32 {
+    uint256 ctHash;
+    uint256 utype;
+    uint256 securityZone;
+    bytes signature;
+}
 
 /**
  * @title FHENoahRegistry
- * @notice Manages identity-wallet bindings and encrypted identity attributes.
- * @dev Uses @fhevm/solidity@0.11.1 which is compatible with @zama-fhe/relayer-sdk@0.4.1.
- *      ZamaEthereumConfig auto-selects the correct Coprocessor for Sepolia (chainId=11155111).
+ * @notice Manages identity-wallet bindings and encrypted identity attributes on Sepolia.
  */
-contract FHENoahRegistry is ZamaEthereumConfig, AccessControl {
+contract FHENoahRegistry is AccessControl {
     bytes32 public constant ISSUER_MANAGER_ROLE = keccak256("ISSUER_MANAGER_ROLE");
 
     // Events
@@ -21,9 +25,10 @@ contract FHENoahRegistry is ZamaEthereumConfig, AccessControl {
 
     // State
     mapping(address => bool) public isRegistered;
-    mapping(address => euint32) internal encryptedAges; // user => encrypted age
+    mapping(address => inEuint32) internal encryptedAges; 
     mapping(address => bool) public trustedIssuers;
-    mapping(bytes32 => address) public identityNullifiers; // nullifier => user address
+    mapping(bytes32 => address) public identityNullifiers; 
+    mapping(address => bytes32) public addressToNullifiers; 
 
     modifier onlyIssuer() {
         require(trustedIssuers[msg.sender], "Not trusted issuer");
@@ -33,16 +38,6 @@ contract FHENoahRegistry is ZamaEthereumConfig, AccessControl {
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ISSUER_MANAGER_ROLE, msg.sender);
-        // Explicitly call inherited config initialization just in case
-        FHE.setCoprocessor(ZamaConfig.getEthereumCoprocessorConfig());
-    }
-
-    /**
-     * @notice Explicitly re-initialize FHE configuration if needed.
-     * @dev Sometimes the implicit inheritance constructor might not trigger as expected in some environments.
-     */
-    function initializeFHE() public onlyRole(DEFAULT_ADMIN_ROLE) {
-        FHE.setCoprocessor(ZamaConfig.getEthereumCoprocessorConfig());
     }
 
     function addIssuer(address issuer, string memory name) external onlyRole(ISSUER_MANAGER_ROLE) {
@@ -51,30 +46,33 @@ contract FHENoahRegistry is ZamaEthereumConfig, AccessControl {
     }
 
     /**
-     * @notice Register user identity with encrypted age and sybil protection.
-     * @param user       The wallet address to bind.
-     * @param nullifier  A unique deterministic hash of the user's identity (Sybil protection).
-     * @param ageHandle  The external handle for the user's encrypted age.
-     * @param ageProof   The FHE input proof from the relayer coprocessor.
+     * @notice Register user identity with encrypted age.
      */
     function registerIdentity(
         address user,
         bytes32 nullifier,
-        externalEuint32 ageHandle,
-        bytes calldata ageProof
+        inEuint32 calldata ageInput
     ) external onlyIssuer {
-        require(identityNullifiers[nullifier] == address(0), "Identity already registered");
+        require(identityNullifiers[nullifier] == address(0), "Identity document already registered");
+        require(addressToNullifiers[user] == bytes32(0), "Address already registered to an identity");
         
-        // FHE.fromExternal verifies the coprocessor proof and returns a live euint32
-        euint32 encryptedAge = FHE.fromExternal(ageHandle, ageProof);
-        encryptedAges[user] = encryptedAge;
+        encryptedAges[user] = ageInput;
+        
         identityNullifiers[nullifier] = user;
+        addressToNullifiers[user] = nullifier;
         isRegistered[user] = true;
         
         emit IdentityRegistered(user, msg.sender);
     }
 
-    function getEncryptedAge(address user) external view returns (euint32) {
+    function getEncryptedAge(address user) external view returns (inEuint32 memory) {
         return encryptedAges[user];
+    }
+    
+    // Simplified version of getSealedAge for Sepolia
+    function getSealedAge(address user, bytes32 publicKey) external view returns (string memory) {
+        // This is a placeholder for the demo on Sepolia
+        // In actual CoFHE, this would be computed by the coprocessor
+        return "CIPHERTEXT_PLACEHOLDER_FOR_SEPOLIA";
     }
 }

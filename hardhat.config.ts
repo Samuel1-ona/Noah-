@@ -1,5 +1,6 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import "fhenix-hardhat-plugin";
 import "dotenv/config";
 
 import "hardhat-preprocessor";
@@ -15,7 +16,7 @@ function getRemappings() {
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.24",
+    version: "0.8.25",
     settings: {
       optimizer: {
         enabled: true,
@@ -48,13 +49,8 @@ const config: HardhatUserConfig = {
     hardhat: {
       chainId: 31337,
     },
-    zama: {
-      url: "https://ethereum-sepolia-rpc.publicnode.com",
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-      chainId: 11155111,
-    },
     sepolia: {
-      url: "https://ethereum-sepolia-rpc.publicnode.com",
+      url: process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia.publicnode.com",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11155111,
     },

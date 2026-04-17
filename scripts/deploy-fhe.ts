@@ -26,6 +26,12 @@ async function main() {
     await protocolAC.waitForDeployment();
     const protocolACAddress = await protocolAC.getAddress();
     console.log("FHEProtocolAccessControl deployed to:", protocolACAddress);
+    // 3. Setup Permissions
+    console.log("Setting up permissions...");
+    // Grant the deployer the Issuer role so they can register identities for the demo
+    const addIssuerTx = await registry.addIssuer(deployer.address, "Genesis Issuer");
+    await addIssuerTx.wait();
+    console.log("Deployer added as a trusted issuer.");
 
     console.log("\nDeployment complete!");
     console.log("-------------------");
