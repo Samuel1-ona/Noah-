@@ -8,7 +8,6 @@ import {
     CheckCircle2,
     Loader2,
     AlertCircle,
-    Info,
     Cpu,
     Wallet,
     Send
@@ -18,6 +17,7 @@ import {
 
 import { NoahSDK, UserClient } from 'noah-protocol';
 import { ethers } from 'ethers';
+import axios from 'axios';
 
 declare global {
     interface Window {
@@ -52,7 +52,6 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
     const [extractedData, setExtractedData] = useState<any>(null);
     const [txHash, setTxHash] = useState<string | null>(null);
     const [lastFile, setLastFile] = useState<File | null>(null);
-    const [isChecksumError, setIsChecksumError] = useState(false);
 
 
     const [fheInput, setFheInput] = useState<any>(null);
@@ -109,21 +108,12 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
             setFileName(file.name);
             setIsProcessing(true);
             setError(null);
-            setIsChecksumError(false);
             try {
                 // By default, extractIdentityData now uses permissive mode (strict: false, force: true)
                 const data = await sdk.extractIdentityData(file);
                 console.log("Extracted Data:", data);
                 setExtractedData(data);
                 
-                // Track if any checksum failed for UI warnings
-                const hasChecksumFailure = data.checksums && 
-                    (!data.checksums.documentNumber || !data.checksums.dateOfBirth || !data.checksums.expiryDate);
-                
-                if (hasChecksumFailure) {
-                    setIsChecksumError(true);
-                }
-
                 setCurrentStep('witness');
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Failed to extract data';
@@ -172,31 +162,35 @@ export const IdentityVerification: React.FC<IdentityVerificationProps> = ({
                 if (!account || !sdk || !fheInput) throw new Error("Missing data or connection");
 
                 try {
-                    // Step 3: Registration logic correctly identifying the issuer vs recipient
-                    console.log("Registering identity on Sepolia (Signed by Issuer Manager)...");
-                    console.log("DEBUG - userClient state:", { 
-                        hasSigner: !!(userClient as any).signer, 
-                        isRegisterFunction: typeof userClient.registerIdentity === 'function',
-                        account,
-                        hasFheInput: !!fheInput,
-                        fheInputData: fheInput?.data
-                    });
+                    console.log("Registering identity via Backend Relayer...");
                     
-                    const result = await userClient.registerIdentity(
-                        account,
-                        { data: fheInput.data, success: true }
-                    );
-                    setTxHash(result.transactionHash);
+                    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000/api/v1';
+                    const apiKey = import.meta.env.VITE_API_KEY;
 
-                    setIsProcessing(false);
-                    setCurrentStep('verified');
+                    const response = await axios.post(`${backendUrl}/identity/register`, {
+                        userAddress: account,
+                        fheInput: fheInput.data
+                    }, {
+                        headers: {
+                            'X-API-Key': apiKey
+                        }
+                    });
+
+                    if (response.data && response.data.success) {
+                        setTxHash(response.data.data.transactionHash);
+                        setIsProcessing(false);
+                        setCurrentStep('verified');
+                    } else {
+                        throw new Error(response.data?.error?.message || "Registration failed via relayer");
+                    }
                 } catch (txErr: any) {
-                    if (txErr.message.includes("already registered")) {
+                    const errorMsg = txErr.response?.data?.error?.message || txErr.message;
+                    if (errorMsg.includes("already registered")) {
                         setIsAlreadyVerified(true);
                         setCurrentStep('verified');
                         return;
                     }
-                    throw txErr;
+                    throw new Error(errorMsg);
                 }
             }
         } catch (err) {
