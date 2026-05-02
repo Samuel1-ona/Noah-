@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Noah Lucky Vault — API Demo</title>
+  <style>
+/* ── Reset ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0c0e14;
+  --surface:   #13161f;
+  --card:      #1a1e2b;
+  --card2:     #1f2435;
+  --border:    #262d44;
+  --accent:    #6c63ff;
+  --accent-h:  #8b85ff;
+  --gold:      #f4c842;
+  --green:     #3ecf8e;
+  --red:       #f87171;
+  --blue:      #60a5fa;
+  --cyan:      #22d3ee;
+  --text:      #dde2ee;
+  --muted:     #7a849a;
+  --radius:    14px;
+  --mono:      'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ── Shell layout ───────────────────────────────────────────── */
+.shell {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  grid-template-rows: 58px 1fr;
+  grid-template-areas: "hdr hdr" "side main";
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.app-header {
+  grid-area: hdr;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.logo { font-size: 1.1rem; font-weight: 800; }
+.logo em { font-style: normal; color: var(--accent); }
+.header-badge {
+  font-size: 0.66rem; font-weight: 700;
+  background: #1f1a40; color: var(--accent-h);
+  border: 1px solid #3d2f8a;
+  border-radius: 100px; padding: 3px 10px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.spacer { flex: 1; }
+.api-wrap {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 0 12px; height: 34px;
+}
+.api-wrap label { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+#api-base {
+  background: transparent; border: none; outline: none;
+  color: var(--cyan); font-family: var(--mono);
+  font-size: 0.8rem; width: 230px;
+}
+#hdot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--muted); transition: background 0.3s;
+}
+#hdot.on  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+#hdot.off { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+#hlbl { font-size: 0.78rem; color: var(--muted); }
+.hbtn {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 7px; color: var(--text);
+  padding: 6px 12px; cursor: pointer; font-size: 0.8rem;
+  transition: border-color 0.15s;
+}
+.hbtn:hover { border-color: var(--accent); color: var(--accent-h); }
+
+/* ── Wallet connect button ──────────────────────────────────── */
+#wallet-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 8px;
+  padding: 8px 16px; cursor: pointer;
+  font-size: 0.82rem; font-weight: 700;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+#wallet-btn:hover { background: var(--accent-h); }
+#wallet-btn.connected {
+  background: var(--card);
+  border: 1px solid var(--green);
+  color: var(--green);
+}
+#wallet-btn.connected:hover { background: var(--card2); }
+#wallet-btn .wdot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: currentColor; flex-shrink: 0;
+}
+
+/* No MetaMask warning */
+#no-mm-msg {
+  font-size: 0.76rem; color: var(--red);
+  display: none; white-space: nowrap;
+}
+#no-mm-msg.show { display: block; }
+
+/* ── Sidebar ────────────────────────────────────────────────── */
+.sidebar {
+  grid-area: side;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sb-section { padding: 16px 18px 0; flex-shrink: 0; }
+.sb-label {
+  font-size: 0.66rem; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--muted); margin-bottom: 8px;
+}
+
+/* ── Verification wizard ────────────────────────────────────── */
+/* Step indicator */
+.steps {
+  display: flex; gap: 0; margin-bottom: 14px;
+}
+.step-item {
+  flex: 1; text-align: center;
+  font-size: 0.68rem; color: var(--muted);
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+  transition: color 0.2s, border-color 0.2s;
+  cursor: default;
+}
+.step-item.active { color: var(--accent-h); border-bottom-color: var(--accent); }
+.step-item.done   { color: var(--green);    border-bottom-color: var(--green); }
+.step-num { font-weight: 700; display: block; font-size: 0.8rem; }
+
+/* Step panels */
+.step-panel { display: none; }
+.step-panel.show { display: block; }
+
+/* Common inputs */
+.field-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.field-group label { font-size: 0.75rem; color: var(--muted); }
+.sb-input {
+  width: 100%;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text);
+  font-size: 0.82rem; padding: 9px 12px; outline: none;
+  transition: border-color 0.15s;
+}
+.sb-input:focus { border-color: var(--accent); }
+.sb-input::placeholder { color: var(--muted); }
+.sb-input.mono { font-family: var(--mono); font-size: 0.76rem; }
+
+.row2 { display: flex; gap: 8px; }
+.row2 .sb-input { flex: 1; min-width: 0; }
+
+/* Buttons */
+.btn-primary {
+  width: 100%; background: var(--accent); color: #fff;
+  border: none; border-radius: 8px; padding: 10px;
+  font-weight: 700; font-size: 0.85rem; cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent-h); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-outline {
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 8px; color: var(--muted);
+  padding: 8px 14px; cursor: pointer; font-size: 0.8rem;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-outline:hover { border-color: var(--accent); color: var(--accent-h); }
+
+/* Info card */
+.info-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px; margin-bottom: 10px;
+  font-size: 0.8rem; line-height: 1.6;
+}
+.info-card .ic-row { display: flex; justify-content: space-between; padding: 2px 0; }
+.ic-key { color: var(--muted); }
+.ic-val { font-family: var(--mono); font-weight: 600; }
+.ic-val.ok   { color: var(--green); }
+.ic-val.bad  { color: var(--red); }
+.ic-val.pend { color: var(--gold); }
+
+/* Upload zone */
+.upload-zone {
+  border: 2px dashed var(--border); border-radius: 10px;
+  padding: 20px; text-align: center; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  margin-bottom: 10px;
+}
+.upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: #1a1740; }
+.upload-zone .uz-icon { font-size: 1.8rem; margin-bottom: 6px; }
+.upload-zone p { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.upload-zone p strong { color: var(--text); }
+#file-input { display: none; }
+
+/* Encrypt viz */
+.enc-visual {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px;
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted); margin-bottom: 10px; line-height: 1.8;
+}
+.enc-visual .ev-key { color: var(--cyan); }
+.enc-visual .ev-val { color: var(--accent-h); word-break: break-all; }
+
+/* Poll status */
+.poll-wrap {
+  text-align: center; padding: 10px 0;
+}
+.poll-wrap .poll-icon { font-size: 2rem; margin-bottom: 8px; }
+.poll-wrap p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+.poll-wrap .tx-link {
+  color: var(--blue); font-family: var(--mono); font-size: 0.72rem;
+  word-break: break-all; display: block; margin-top: 6px;
+}
+
+/* ── Sidebar activity log ───────────────────────────────────── */
+.log-area { flex: 1; overflow-y: auto; padding: 8px 18px 16px; }
+.log-entry {
+  display: flex; gap: 7px; font-size: 0.73rem;
+  padding: 4px 0; border-bottom: 1px solid #1a1e2b; line-height: 1.4;
+}
+.log-t { color: var(--muted); font-family: var(--mono); flex-shrink: 0; }
+.log-m { flex: 1; }
+.log-m.ok   { color: var(--green); }
+.log-m.err  { color: var(--red); }
+.log-m.warn { color: var(--gold); }
+.log-m.info { color: var(--text); }
+
+/* ── Main 4-pane grid ───────────────────────────────────────── */
+.main-area {
+  grid-area: main;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  overflow: hidden;
+}
+.pane {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.pane:nth-child(2n)   { border-right: none; }
+.pane:nth-child(n+3)  { border-bottom: none; }
+.pane-hdr {
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.pane-title { font-size: 0.8rem; font-weight: 700; }
+.pane-sub   { font-size: 0.7rem; color: var(--muted); margin-left: auto; }
+.pane-body  { flex: 1; overflow-y: auto; padding: 16px; }
+
+/* ── Game pane ──────────────────────────────────────────────── */
+.game-locked {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100%; gap: 10px; color: var(--muted);
+  text-align: center; padding: 20px;
+}
+.game-locked .lk-icon { font-size: 2.2rem; }
+.game-locked p { font-size: 0.82rem; line-height: 1.6; }
+
+.game-ui { display: none; flex-direction: column; gap: 14px; }
+.game-ui.show { display: flex; }
+
+.dice-row { display: flex; gap: 8px; justify-content: center; }
+.die {
+  width: 52px; height: 52px;
+  background: var(--card2); border: 2px solid var(--border);
+  border-radius: 10px; font-size: 1.7rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; user-select: none;
+  transition: border-color 0.15s, transform 0.12s, background 0.15s;
+}
+.die:hover { border-color: var(--accent); transform: translateY(-2px); }
+.die.sel   { border-color: var(--accent); background: #231f4d; transform: translateY(-2px); }
+
+#bet-display {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 14px;
+  font-family: var(--mono); font-size: 0.9rem; color: var(--gold);
+  text-align: center;
+}
+.tokens { display: flex; gap: 6px; flex-wrap: wrap; }
+.tok {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--muted);
+  font-size: 0.73rem; padding: 5px 10px; cursor: pointer;
+  transition: all 0.15s;
+}
+.tok:hover { border-color: var(--gold); color: var(--gold); }
+.tok.on    { border-color: var(--gold); color: var(--gold); background: #2a1f00; }
+
+.odds-row { display: flex; gap: 8px; }
+.od {
+  flex: 1; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px; text-align: center;
+}
+.od .ov { font-size: 1.05rem; font-weight: 800; }
+.od .ol { font-size: 0.68rem; color: var(--muted); }
+.od.j .ov { color: var(--gold); }
+.od.n .ov { color: var(--green); }
+.od.m .ov { color: var(--red); }
+
+#roll-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent), #9b59ff);
+  color: #fff; border: none; border-radius: 10px;
+  padding: 13px; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+#roll-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+#roll-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.res-flash {
+  border-radius: 10px; padding: 14px; text-align: center;
+  display: none; animation: popIn 0.25s;
+}
+.res-flash.show { display: block; }
+.res-flash.jackpot { background: #251e00; border: 1px solid #6b5000; }
+.res-flash.near    { background: #0d2a1d; border: 1px solid #1e5e44; }
+.res-flash.miss    { background: #2a1212; border: 1px solid #5e2222; }
+.rf-em { font-size: 1.8rem; margin-bottom: 4px; }
+.rf-ti { font-size: 0.95rem; font-weight: 800; }
+.rf-su { font-size: 0.76rem; color: var(--muted); margin-top: 4px; }
+@keyframes popIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
+
+/* ── API Explorer pane ──────────────────────────────────────── */
+.box-lbl { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 6px; }
+.req-box, .res-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+  font-family: var(--mono); font-size: 0.73rem; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-all;
+  min-height: 56px; max-height: 140px; overflow-y: auto;
+  color: var(--cyan);
+}
+.res-box { color: var(--green); }
+.res-box.err { color: var(--red); }
+
+.pill {
+  font-family: var(--mono); font-size: 0.7rem; font-weight: 700;
+  padding: 2px 8px; border-radius: 100px;
+}
+.pill.s2 { background: #0d2a1d; color: var(--green); }
+.pill.s4 { background: #2a1f00; color: var(--gold); }
+.pill.s5 { background: #2a1212; color: var(--red); }
+.lat { font-size: 0.7rem; color: var(--muted); font-family: var(--mono); }
+
+.ep-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.ep {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s; color: var(--text);
+  font-size: 0.78rem; text-align: left;
+}
+.ep:hover { border-color: var(--accent); background: var(--card2); }
+.mth {
+  font-family: var(--mono); font-size: 0.64rem; font-weight: 700;
+  padding: 2px 6px; border-radius: 4px; flex-shrink: 0; min-width: 36px; text-align: center;
+}
+.mth.G { background: #0d2a1d; color: var(--green); }
+.mth.P { background: #1f1a40; color: var(--accent-h); }
+.ep-path { font-family: var(--mono); font-size: 0.74rem; color: var(--cyan); }
+.ep-desc { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
+
+/* ── Stats pane ─────────────────────────────────────────────── */
+.sg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sc { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.sc .sl { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 4px; }
+.sc .sv { font-size: 1.5rem; font-weight: 800; font-family: var(--mono); }
+.sc .ss { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.sc .sv.gd { color: var(--gold); }
+.sc .sv.gr { color: var(--green); }
+.sc .sv.bl { color: var(--blue); }
+.sc .sv.rd { color: var(--red); }
+
+.hist { display: flex; flex-direction: column; gap: 5px; margin-top: 14px; }
+.hi {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--surface); border-radius: 7px;
+  padding: 7px 10px; font-size: 0.76rem; animation: popIn 0.2s;
+}
+.hbdg {
+  font-size: 0.62rem; font-weight: 700; padding: 2px 6px;
+  border-radius: 100px; min-width: 46px; text-align: center;
+}
+.hbdg.jackpot { background: #251e00; color: var(--gold); }
+.hbdg.near    { background: #0d2a1d; color: var(--green); }
+.hbdg.miss    { background: #2a1212; color: var(--red); }
+.hscore { margin-left: auto; font-weight: 700; font-family: var(--mono); }
+.hscore.gd { color: var(--gold); }
+.hscore.gr { color: var(--green); }
+.hscore.rd { color: var(--red); }
+
+/* ── HTTP log pane ──────────────────────────────────────────── */
+.http-log { display: flex; flex-direction: column; gap: 5px; }
+.hle {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; cursor: pointer;
+  transition: border-color 0.15s; animation: popIn 0.2s; font-size: 0.75rem;
+}
+.hle:hover { border-color: var(--accent); }
+.hle.sel   { border-color: var(--accent); background: var(--card2); }
+.hle-top { display: flex; align-items: center; gap: 7px; }
+.hle-url {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--cyan);
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hle-t { font-size: 0.68rem; color: var(--muted); font-family: var(--mono); flex-shrink: 0; }
+.hle-prev {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--muted);
+  margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── Spinner ────────────────────────────────────────────────── */
+.spin {
+  width: 14px; height: 14px; display: inline-block; vertical-align: middle;
+  border: 2px solid rgba(108,99,255,0.25);
+  border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Toast ──────────────────────────────────────────────────── */
+#toast {
+  position: fixed; bottom: 22px; left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 20px;
+  font-size: 0.83rem; font-weight: 500;
+  transition: transform 0.3s; z-index: 999; pointer-events: none;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── Scrollbars ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ══════════ HEADER ══════════ -->
+<header class="app-header">
+  <div class="logo">Noah <em>Lucky</em> Vault</div>
+  <div class="header-badge">API Demo</div>
+  <div class="spacer"></div>
+  <div class="api-wrap">
+    <label>API</label>
+    <input id="api-base" type="text" value="http://localhost:3000/api/v1" spellcheck="false" />
+  </div>
+  <div id="hdot"></div>
+  <span id="hlbl">checking…</span>
+  <button class="hbtn" onclick="pingHealth()">↻ ping</button>
+
+  <!-- Wallet connect -->
+  <span id="no-mm-msg">⚠ MetaMask not found</span>
+  <button id="wallet-btn" onclick="connectWallet()">
+    <span class="wdot"></span>
+    <span id="wallet-label">Connect Wallet</span>
+  </button>
+</header>
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<aside class="sidebar">
+
+  <!-- Step indicator -->
+  <div class="sb-section" style="padding-top:14px">
+    <div class="steps" id="steps">
+      <div class="step-item active" id="si-0"><span class="step-num">1</span>Connect</div>
+      <div class="step-item"        id="si-1"><span class="step-num">2</span>Verify</div>
+      <div class="step-item"        id="si-2"><span class="step-num">3</span>Play</div>
+    </div>
+  </div>
+
+  <!-- ─── STEP 0: Connect ─────────────────────────────────── -->
+  <div class="sb-section step-panel show" id="sp-0">
+    <div class="sb-label">Your Ethereum Address</div>
+
+    <div class="field-group">
+      <input id="addr-input" class="sb-input mono" type="text"
+        placeholder="Connect wallet above, or paste 0x…" spellcheck="false" />
+    </div>
+
+    <button class="btn-primary" onclick="doCheckStatus()">
+      Check Noah KYC Status
+    </button>
+
+    <!-- Identity result card (hidden until checked) -->
+    <div class="info-card" id="id-card" style="display:none;margin-top:10px">
+      <div class="ic-row">
+        <span class="ic-key">Address</span>
+        <span class="ic-val" id="id-addr" style="font-size:0.7rem">—</span>
+      </div>
+      <div class="ic-row">
+        <span class="ic-key">Noah KYC</span>
+        <span class="ic-val" id="id-kyc">—</span>
+      </div>
+      <div class="ic-row" id="id-null-row" style="display:none">
+        <span class="ic-key">Nullifier</span>
+        <span class="ic-val" id="id-null" style="font-size:0.65rem;word-break:break-all">—</span>
+      </div>
+    </div>
+
+    <div id="already-verified" style="display:none;margin-top:8px">
+      <button class="btn-primary" style="background:var(--green)" onclick="unlockGame()">
+        ✓ Already verified — play now
+      </button>
+    </div>
+
+    <div id="go-register" style="display:none;margin-top:8px">
+      <button class="btn-primary" onclick="goToStep(1)">
+        Register with Noah →
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── STEP 1: Register / Verify ───────────────────────── -->
+  <div class="sb-section step-panel" id="sp-1">
+    <div class="sb-label">Noah Identity Registration</div>
+
+    <!-- Sub-step 1a: upload ID image -->
+    <div id="reg-1a">
+      <p style="font-size:0.78rem;color:var(--muted);line-height:1.6;margin-bottom:10px">
+        The backend extracts your age from your ID/passport image using OCR, without storing the image.
+        The raw age <em>never</em> leaves the browser unencrypted.
+      </p>
+
+      <div class="upload-zone" id="upload-zone"
+           onclick="document.getElementById('file-input').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDrop(event)">
+        <div class="uz-icon">🪪</div>
+        <p><strong>Click or drag</strong> a passport / national ID image<br>
+        JPEG or PNG · max 10 MB</p>
+      </div>
+      <input type="file" id="file-input" accept="image/jpeg,image/png"
+             onchange="handleFileSelect(this)" />
+
+      <div class="info-card" id="extract-result" style="display:none">
+        <div class="ic-row"><span class="ic-key">Extracted age</span>
+          <span class="ic-val" id="ext-age">—</span></div>
+        <div class="ic-row"><span class="ic-key">Confidence</span>
+          <span class="ic-val" id="ext-conf">—</span></div>
+        <div class="ic-row"><span class="ic-key">Status</span>
+          <span class="ic-val ok">Extracted ✓</span></div>
+      </div>
+
+      <!-- Manual override (dev/test) -->
+      <details style="margin-top:8px">
+        <summary style="font-size:0.74rem;color:var(--muted);cursor:pointer">
+          Enter age manually (dev / test)
+        </summary>
+        <div class="field-group" style="margin-top:8px">
+          <input id="manual-age" class="sb-input" type="number" min="18" max="120"
+                 placeholder="Age (e.g. 25)" />
+          <button class="btn-outline" onclick="useManualAge()">Use this age</button>
+        </div>
+      </details>
+
+      <button class="btn-primary" id="btn-go-encrypt" style="margin-top:10px" disabled
+              onclick="goToEncrypt()">
+        Next: Encrypt with FHE →
+      </button>
+    </div>
+
+    <!-- Sub-step 1b: FHE encrypt + send to backend -->
+    <div id="reg-1b" style="display:none">
+      <p style="font-size:0.78rem;color:var(--muted);line-height:1.6;margin-bottom:10px">
+        Your age is encrypted <strong>in this browser</strong> using the Noah SDK's FHE encryptor.
+        The backend only ever receives the ciphertext — it never sees the plaintext.
+      </p>
+
+      <div class="enc-visual" id="enc-visual">
+        <span class="ev-key">age (plaintext) → </span><span id="ev-raw">—</span><br>
+        <span class="ev-key">fheInput.ctHash → </span><span id="ev-ct" class="ev-val">encrypting…</span><br>
+        <span class="ev-key">fheInput.sig     → </span><span id="ev-sig" class="ev-val">—</span>
+      </div>
+
+      <div class="field-group">
+        <label>API Key (required for /identity/register)</label>
+        <input id="reg-apikey" class="sb-input" type="text"
+               placeholder="from your backend .env API_KEY" />
+      </div>
+
+      <button class="btn-primary" id="btn-register" onclick="doRegister()">
+        Send to Backend → POST /identity/register
+      </button>
+      <button class="btn-outline" style="margin-top:6px;width:100%" onclick="goToStep(0)">← Back</button>
+    </div>
+  </div>
+
+  <!-- ─── STEP 2: Polling / Done ───────────────────────────── -->
+  <div class="sb-section step-panel" id="sp-2">
+    <div class="poll-wrap" id="poll-wait" style="display:none">
+      <div class="poll-icon">⛓️</div>
+      <p>Transaction submitted.<br>Waiting for on-chain confirmation…</p>
+      <a class="tx-link" id="tx-link" href="#" target="_blank">—</a>
+      <div style="margin:12px auto;width:fit-content"><div class="spin"></div></div>
+    </div>
+
+    <div class="poll-wrap" id="poll-done" style="display:none">
+      <div class="poll-icon">🎉</div>
+      <p style="color:var(--green);font-weight:700;font-size:0.95rem">Identity verified!</p>
+      <p style="margin-top:6px">Noah Protocol confirmed your KYC on-chain.<br>The game is now unlocked.</p>
+      <button class="btn-primary" style="margin-top:14px" onclick="unlockGame()">Play Now 🎲</button>
+    </div>
+  </div>
+
+  <!-- Activity log -->
+  <div class="sb-label" style="padding:6px 18px 4px;flex-shrink:0;margin-top:6px">Activity</div>
+  <div class="log-area" id="sb-log"></div>
+
+</aside>
+
+<!-- ══════════ MAIN 4-PANE ══════════ -->
+<div class="main-area">
+
+  <!-- PANE 1: Game -->
+  <div class="pane">
+    <div class="pane-hdr">
+      <span>🎲</span>
+      <span class="pane-title">Noah Lucky Vault</span>
+      <span class="pane-sub" id="game-lbl" style="color:var(--muted)">Not verified</span>
+    </div>
+    <div class="pane-body" style="display:flex;flex-direction:column;gap:12px">
+
+      <div class="game-locked" id="game-locked">
+        <div class="lk-icon">🔒</div>
+        <p>Complete the <strong>verification steps</strong> in the sidebar to unlock the game.<br><br>
+        Noah Protocol checks your identity privately — once verified, you play forever without re-verifying.</p>
+      </div>
+
+      <div class="game-ui" id="game-ui">
+        <div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.8px">Pick your number</div>
+          <div class="dice-row">
+            <div class="die" data-v="1" onclick="pickDie(1)">⚀</div>
+            <div class="die" data-v="2" onclick="pickDie(2)">⚁</div>
+            <div class="die" data-v="3" onclick="pickDie(3)">⚂</div>
+            <div class="die" data-v="4" onclick="pickDie(4)">⚃</div>
+            <div class="die" data-v="5" onclick="pickDie(5)">⚄</div>
+            <div class="die" data-v="6" onclick="pickDie(6)">⚅</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.8px">Bet size (coins)</div>
+          <div id="bet-display">100</div>
+          <div class="tokens" style="margin-top:7px">
+            <button class="tok on"  data-b="100"  onclick="setBet(100)">100</button>
+            <button class="tok"     data-b="250"  onclick="setBet(250)">250</button>
+            <button class="tok"     data-b="500"  onclick="setBet(500)">500</button>
+            <button class="tok"     data-b="1000" onclick="setBet(1000)">1 000</button>
+          </div>
+        </div>
+        <div class="odds-row">
+          <div class="od j"><div class="ov">5×</div><div class="ol">Exact</div></div>
+          <div class="od n"><div class="ov">1.5×</div><div class="ol">±1 off</div></div>
+          <div class="od m"><div class="ov">0×</div><div class="ol">Miss</div></div>
+        </div>
+        <button id="roll-btn" onclick="rollDice()" disabled>🎲 Roll the Dice</button>
+        <div class="res-flash" id="res-flash">
+          <div class="rf-em" id="rf-em"></div>
+          <div class="rf-ti" id="rf-ti"></div>
+          <div class="rf-su" id="rf-su"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PANE 2: API Explorer -->
+  <div class="pane">
+    <div class="pane-hdr">
+      <span>🔌</span>
+      <span class="pane-title">API Explorer</span>
+      <span class="pill" id="last-st" style="display:none"></span>
+      <span class="lat"  id="last-lat"></span>
+    </div>
+    <div class="pane-body" style="display:flex;flex-direction:column;gap:12px">
+
+      <!-- Quick endpoint buttons -->
+      <div class="ep-list">
+        <button class="ep" onclick="qHealth()">
+          <span class="mth G">GET</span>
+          <div><div class="ep-path">/health</div><div class="ep-desc">Liveness + relayer balance</div></div>
+        </button>
+        <button class="ep" onclick="qStatus()">
+          <span class="mth G">GET</span>
+          <div><div class="ep-path">/identity/status/:address</div><div class="ep-desc">Noah KYC registration check</div></div>
+        </button>
+        <button class="ep" onclick="qNullifier()">
+          <span class="mth G">GET</span>
+          <div><div class="ep-path">/identity/nullifier/:address</div><div class="ep-desc">Deterministic nullifier hash</div></div>
+        </button>
+        <button class="ep" onclick="qProtocolReq()">
+          <span class="mth G">GET</span>
+          <div><div class="ep-path">/protocol/requirements/:addr</div><div class="ep-desc">On-chain KYC requirements</div></div>
+        </button>
+        <button class="ep" onclick="qAccessCheck()">
+          <span class="mth P">POST</span>
+          <div><div class="ep-path">/protocol/access/check</div><div class="ep-desc">Check user protocol access</div></div>
+        </button>
+        <button class="ep" onclick="qRelayer()">
+          <span class="mth G">GET</span>
+          <div><div class="ep-path">/relayer/status</div><div class="ep-desc">Relayer wallet + balance (auth)</div></div>
+        </button>
+      </div>
+
+      <!-- Custom request -->
+      <div style="display:flex;gap:6px">
+        <select id="cx-method" style="background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 8px;outline:none;font-size:0.78rem">
+          <option>GET</option><option>POST</option>
+        </select>
+        <input id="cx-path" type="text" value="/health"
+          style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--cyan);font-family:var(--mono);font-size:0.76rem;padding:7px 10px;outline:none" />
+      </div>
+      <textarea id="cx-body" placeholder='{"key": "value"}'
+        style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--cyan);font-family:var(--mono);font-size:0.72rem;padding:8px 10px;outline:none;resize:vertical;min-height:52px;line-height:1.5"></textarea>
+      <div style="display:flex;gap:6px">
+        <input id="cx-key" type="text" placeholder="X-API-Key (optional)"
+          style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.76rem;padding:7px 10px;outline:none" />
+        <button class="hbtn" onclick="fireCustom()" style="background:var(--accent);border-color:var(--accent);color:#fff">▶ Send</button>
+      </div>
+
+      <div>
+        <div class="box-lbl">Last Request</div>
+        <div class="req-box" id="req-box">— fire an endpoint —</div>
+      </div>
+      <div>
+        <div class="box-lbl">Response</div>
+        <div class="res-box" id="res-box">—</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PANE 3: Stats -->
+  <div class="pane">
+    <div class="pane-hdr">
+      <span>📊</span>
+      <span class="pane-title">Game Stats</span>
+      <span class="pane-sub">This session</span>
+    </div>
+    <div class="pane-body">
+      <div class="sg">
+        <div class="sc"><div class="sl">Balance</div><div class="sv gd" id="s-bal">10 000</div><div class="ss">coins</div></div>
+        <div class="sc"><div class="sl">Games</div><div class="sv bl" id="s-games">0</div></div>
+        <div class="sc"><div class="sl">Net P&amp;L</div><div class="sv gr" id="s-pnl">+0</div><div class="ss" id="s-roi">0%</div></div>
+        <div class="sc"><div class="sl">Best Streak</div><div class="sv gd" id="s-streak">0</div><div class="ss">wins</div></div>
+      </div>
+      <div class="hist" id="hist">
+        <div style="color:var(--muted);font-size:0.78rem;text-align:center;padding:16px 0" data-ph>
+          No games yet — verify your identity and roll!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANE 4: HTTP Log -->
+  <div class="pane">
+    <div class="pane-hdr">
+      <span>📡</span>
+      <span class="pane-title">HTTP Request Log</span>
+      <button class="hbtn" onclick="clearLog()" style="margin-left:auto;font-size:0.7rem;padding:4px 9px">Clear</button>
+    </div>
+    <div class="pane-body">
+      <div class="http-log" id="http-log">
+        <div style="color:var(--muted);font-size:0.78rem;text-align:center;padding:16px 0">
+          No requests yet.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end main-area -->
+</div><!-- end shell -->
+
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCRIPT
+══════════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── Config ────────────────────────────────────────────────────
+const PROTOCOL = '0x503De26148ACa67Aa97E12eC545B22e7216f1BE4';
+const DICE     = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+
+// ── App state ─────────────────────────────────────────────────
+let currentAddr  = '';
+let isVerified   = false;
+let selectedDie  = null;
+let currentBet   = 100;
+let extractedAge = null;
+let fheInput     = null;   // { ctHash, utype, securityZone, signature }
+
+// Game stats
+let balance = 10000, games = 0, pnl = 0, winRun = 0, bestRun = 0;
+
+// ── Helpers ───────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const ab = () => $('api-base').value.replace(/\/$/, '');
+
+function nowT() { return new Date().toLocaleTimeString('en-US',{hour12:false}); }
+
+function toast(msg, ms = 3000) {
+  const el = $('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+function slog(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = 'log-entry';
+  el.innerHTML = `<span class="log-t">${nowT()}</span><span class="log-m ${type}">${esc(msg)}</span>`;
+  $('sb-log').prepend(el);
+  if ($('sb-log').children.length > 80) $('sb-log').lastChild.remove();
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function isAddr(s) { return /^0x[0-9a-fA-F]{40}$/.test(s); }
+
+// ── Step wizard ───────────────────────────────────────────────
+function goToStep(n) {
+  [0,1,2].forEach(i => {
+    $(`sp-${i}`).classList.toggle('show', i === n);
+    const si = $(`si-${i}`);
+    si.classList.remove('active','done');
+    if (i < n)  si.classList.add('done');
+    if (i === n) si.classList.add('active');
+  });
+}
+
+// ── Core fetch ────────────────────────────────────────────────
+async function apiFetch(method, path, body, hdrs = {}) {
+  const url = ab() + path;
+  const t0  = Date.now();
+  const reqStr = [
+    `${method} ${path}`,
+    ...Object.entries(hdrs).map(([k,v]) => `${k}: ${v}`),
+    body ? '\n' + JSON.stringify(body, null, 2) : ''
+  ].filter(Boolean).join('\n');
+
+  $('req-box').textContent = reqStr;
+  $('res-box').textContent = '⏳ waiting…';
+  $('res-box').className   = 'res-box';
+
+  let status = 0, resData = null, resText = '';
+  try {
+    const r = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...hdrs },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    status  = r.status;
+    resText = await r.text();
+    try { resData = JSON.parse(resText); } catch { resData = resText; }
+  } catch(e) {
+    resText = 'Network error: ' + e.message;
+    resData = { error: resText };
+  }
+
+  const lat = Date.now() - t0;
+  const resStr = typeof resData === 'object' ? JSON.stringify(resData, null, 2) : String(resData);
+  const isErr  = status >= 400 || !status;
+
+  $('res-box').textContent = resStr;
+  $('res-box').className   = 'res-box' + (isErr ? ' err' : '');
+
+  const pill = $('last-st');
+  pill.style.display = '';
+  pill.textContent   = status || 'ERR';
+  pill.className     = 'pill ' + (!status || status>=500 ? 's5' : status>=400 ? 's4' : 's2');
+  $('last-lat').textContent = lat + 'ms';
+
+  addHttpEntry({ method, path, status, lat, req: reqStr, res: resStr });
+  slog(`${method} ${path} → ${status||'ERR'} (${lat}ms)`, isErr ? 'err' : 'ok');
+
+  return { status, data: resData, ok: !isErr };
+}
+
+// ── HTTP log entries ──────────────────────────────────────────
+function addHttpEntry(e) {
+  const log = $('http-log');
+  if (!log.querySelector('[data-ph]')) {/* already has entries */}
+  else log.innerHTML = '';
+
+  const sc = !e.status||e.status>=500?'s5':e.status>=400?'s4':'s2';
+  const el = document.createElement('div');
+  el.className = 'hle';
+  el.innerHTML = `
+    <div class="hle-top">
+      <span class="mth ${e.method[0]}"
+        style="font-family:var(--mono);font-size:0.62rem;font-weight:700;padding:2px 5px;border-radius:3px;flex-shrink:0;min-width:34px;text-align:center">${e.method}</span>
+      <span class="hle-url">${esc(e.path)}</span>
+      <span class="pill ${sc}">${e.status||'ERR'}</span>
+      <span class="hle-t">${e.lat}ms</span>
+    </div>
+    <div class="hle-prev">${esc((e.res||'').slice(0,90))}</div>`;
+  el.onclick = () => {
+    document.querySelectorAll('.hle').forEach(x => x.classList.remove('sel'));
+    el.classList.add('sel');
+    $('req-box').textContent = e.req;
+    $('res-box').textContent = e.res;
+    $('res-box').className = 'res-box' + (e.status>=400||!e.status?' err':'');
+  };
+  log.prepend(el);
+  if (log.children.length > 50) log.lastChild.remove();
+}
+
+function clearLog() {
+  $('http-log').innerHTML = '<div data-ph style="color:var(--muted);font-size:0.78rem;text-align:center;padding:16px 0">Log cleared.</div>';
+}
+
+// ── Health ────────────────────────────────────────────────────
+async function pingHealth() {
+  const {status} = await apiFetch('GET', '/health');
+  const ok = status === 200;
+  $('hdot').className = ok ? 'on' : 'off';
+  $('hlbl').textContent = ok ? 'online' : 'offline';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  STEP 0 — Check KYC status
+// ══════════════════════════════════════════════════════════════
+async function doCheckStatus() {
+  const a = $('addr-input').value.trim();
+  if (!isAddr(a)) { toast('Enter a valid 0x address'); return; }
+  currentAddr = a;
+
+  const { data, ok } = await apiFetch('GET', `/identity/status/${a}`);
+
+  // Show identity card
+  $('id-card').style.display = '';
+  $('id-addr').textContent = a.slice(0,8) + '…' + a.slice(-6);
+
+  isVerified = !!(data?.isRegistered || data?.registered || data?.data?.isRegistered || data?.status === 'verified');
+
+  const kycEl = $('id-kyc');
+  kycEl.textContent = isVerified ? '✓ Verified' : '✗ Not registered';
+  kycEl.className   = 'ic-val ' + (isVerified ? 'ok' : 'bad');
+
+  // Also fetch nullifier if possible
+  fetchNullifierSilent(a);
+
+  if (isVerified) {
+    $('go-register').style.display   = 'none';
+    $('already-verified').style.display = '';
+    slog(`${a.slice(0,8)}… is Noah-verified ✓`, 'ok');
+  } else {
+    $('already-verified').style.display = 'none';
+    $('go-register').style.display       = '';
+    slog(`${a.slice(0,8)}… NOT registered — registration required`, 'warn');
+  }
+}
+
+async function fetchNullifierSilent(a) {
+  try {
+    const { data } = await apiFetch('GET', `/identity/nullifier/${a}`);
+    const n = data?.nullifier || data?.data?.nullifier;
+    if (n) {
+      $('id-null').textContent = n;
+      $('id-null-row').style.display = '';
+    }
+  } catch {}
+}
+
+function unlockGame() {
+  isVerified = true;
+  $('game-locked').style.display = 'none';
+  $('game-ui').classList.add('show');
+  $('game-lbl').textContent = '✓ Verified — play enabled';
+  $('game-lbl').style.color = 'var(--green)';
+  goToStep(2);
+  $('si-2').classList.add('done');
+  slog('Game unlocked ✓', 'ok');
+  toast('Identity verified — game is unlocked! 🎲');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  STEP 1 — Registration flow
+// ══════════════════════════════════════════════════════════════
+
+// ── 1a: Upload + extract ──────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  $('upload-zone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) processFile(f);
+}
+function handleFileSelect(inp) {
+  if (inp.files[0]) processFile(inp.files[0]);
+}
+
+async function processFile(file) {
+  if (!file.type.match(/image\/(jpeg|png)/)) {
+    toast('Only JPEG or PNG accepted'); return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    toast('File too large — max 10 MB'); return;
+  }
+
+  slog(`Uploading ${file.name} (${(file.size/1024).toFixed(1)} KB) to /identity/extract…`, 'info');
+  toast('Extracting identity from image…');
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const t0  = Date.now();
+  const url = ab() + '/identity/extract';
+
+  $('req-box').textContent = `POST /identity/extract\n[multipart/form-data — image upload]`;
+  $('res-box').textContent = '⏳ OCR in progress…';
+  $('res-box').className   = 'res-box';
+
+  let status = 0, resData = null;
+  try {
+    const r = await fetch(url, { method: 'POST', body: formData });
+    status  = r.status;
+    const txt = await r.text();
+    try { resData = JSON.parse(txt); } catch { resData = txt; }
+  } catch(e) {
+    resData = { error: 'Network error: ' + e.message };
+  }
+
+  const lat    = Date.now() - t0;
+  const resStr = typeof resData === 'object' ? JSON.stringify(resData, null, 2) : String(resData);
+  const isErr  = status >= 400 || !status;
+
+  $('res-box').textContent = resStr;
+  $('res-box').className   = 'res-box' + (isErr ? ' err' : '');
+
+  addHttpEntry({ method:'POST', path:'/identity/extract', status, lat, req:'POST /identity/extract\n[image upload]', res: resStr });
+  slog(`POST /identity/extract → ${status||'ERR'} (${lat}ms)`, isErr ? 'err' : 'ok');
+
+  if (!isErr) {
+    const age = resData?.age || resData?.data?.age;
+    if (age) {
+      extractedAge = Number(age);
+      $('ext-age').textContent  = extractedAge;
+      $('ext-conf').textContent = resData?.confidence ? Math.round(resData.confidence * 100) + '%' : 'n/a';
+      $('extract-result').style.display = '';
+      $('btn-go-encrypt').disabled = false;
+      slog(`OCR extracted age: ${extractedAge}`, 'ok');
+      toast(`Age extracted: ${extractedAge}`);
+    } else {
+      toast('Could not extract age from image — try manual entry', 4000);
+      slog('OCR did not find age field', 'warn');
+    }
+  } else {
+    toast('Extraction failed — check backend logs', 4000);
+  }
+}
+
+function useManualAge() {
+  const v = parseInt($('manual-age').value);
+  if (isNaN(v) || v < 1 || v > 130) { toast('Enter a valid age'); return; }
+  extractedAge = v;
+  $('ext-age').textContent = v;
+  $('ext-conf').textContent = 'manual';
+  $('extract-result').style.display = '';
+  $('btn-go-encrypt').disabled = false;
+  slog(`Manual age set: ${v}`, 'info');
+  toast(`Age set to ${v} — click Next to encrypt`);
+}
+
+// ── 1b: FHE encrypt + register ────────────────────────────────
+function goToEncrypt() {
+  if (!extractedAge) { toast('Extract or enter your age first'); return; }
+  $('reg-1a').style.display = 'none';
+  $('reg-1b').style.display = '';
+
+  $('ev-raw').textContent = extractedAge;
+  $('ev-ct').textContent  = 'encrypting…';
+  $('ev-sig').textContent = '—';
+
+  // Attempt FHE encryption using window.ethereum (Noah SDK)
+  performFHEEncrypt(extractedAge);
+}
+
+async function performFHEEncrypt(age) {
+  slog('Attempting FHE encryption via Noah SDK (browser)…', 'info');
+
+  /*
+   * In a production integration this is where you would call:
+   *
+   *   import { FHEEncryptor } from '@cofhe/sdk/web';
+   *   const encryptor = new FHEEncryptor(window.ethereum);
+   *   const result = await encryptor.encrypt(age, { type: 'uint8' });
+   *   // result = { ctHash, utype, securityZone, signature }
+   *
+   * The Noah SDK is not available on a public CDN, so for this demo
+   * we simulate the ciphertext shape to show the full flow.
+   * Replace the lines below with the real SDK call in production.
+   */
+
+  // Simulated FHE output (real output would be EVM-compatible bigints / hex strings)
+  await new Promise(r => setTimeout(r, 900)); // simulate encryption time
+
+  fheInput = {
+    ctHash:       '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join(''),
+    utype:        1,          // uint8
+    securityZone: 0,
+    signature:    '0x' + Array.from({length: 130}, () => Math.floor(Math.random()*16).toString(16)).join(''),
+  };
+
+  $('ev-ct').textContent  = fheInput.ctHash;
+  $('ev-sig').textContent = fheInput.signature.slice(0, 20) + '…';
+  slog('FHE ciphertext ready — plaintext age never leaves the browser', 'ok');
+}
+
+async function doRegister() {
+  if (!fheInput)      { toast('FHE encryption not ready yet'); return; }
+  if (!currentAddr)   { toast('No address — go back to step 1'); return; }
+
+  const key = $('reg-apikey').value.trim();
+  if (!key) { toast('Enter your API_KEY from the backend .env'); return; }
+
+  const body = {
+    userAddress: currentAddr,
+    fheInput: {
+      ctHash:       fheInput.ctHash,
+      utype:        fheInput.utype,
+      securityZone: fheInput.securityZone,
+      signature:    fheInput.signature,
+    },
+  };
+
+  slog(`POST /identity/register for ${currentAddr.slice(0,8)}…`, 'info');
+
+  const { data, ok } = await apiFetch(
+    'POST', '/identity/register', body,
+    { 'X-API-Key': key }
+  );
+
+  if (ok) {
+    const txHash = data?.txHash || data?.data?.txHash || data?.transactionHash;
+    goToStep(2);
+    $('poll-wait').style.display = '';
+    $('poll-done').style.display = 'none';
+
+    if (txHash) {
+      const link = $('tx-link');
+      link.href        = `https://sepolia.etherscan.io/tx/${txHash}`;
+      link.textContent = txHash;
+      slog(`Tx submitted: ${txHash.slice(0,16)}…`, 'ok');
+      toast('Transaction submitted — waiting for confirmation…', 5000);
+      pollRegistration(txHash);
+    } else {
+      // Backend responded OK but no txHash (e.g. already registered or dry-run)
+      onRegistered();
+    }
+  } else {
+    slog('Registration failed — check the API explorer for details', 'err');
+    toast('Registration failed — see API explorer', 4000);
+  }
+}
+
+// ── Poll until isRegistered = true ────────────────────────────
+async function pollRegistration(txHash) {
+  let attempts = 0;
+  const interval = setInterval(async () => {
+    attempts++;
+    slog(`Polling /identity/status (attempt ${attempts})…`, 'info');
+
+    const { data } = await apiFetch('GET', `/identity/status/${currentAddr}`);
+    const registered = !!(data?.isRegistered || data?.registered || data?.data?.isRegistered);
+
+    if (registered || attempts >= 30) {
+      clearInterval(interval);
+      if (registered) {
+        onRegistered();
+      } else {
+        slog('Timed out waiting for on-chain confirmation', 'warn');
+        toast('Still waiting for confirmation — check Etherscan', 5000);
+      }
+    }
+  }, 8000);
+}
+
+function onRegistered() {
+  isVerified = true;
+  $('poll-wait').style.display = 'none';
+  $('poll-done').style.display = '';
+  $('si-2').classList.add('active');
+  slog('Noah identity confirmed on-chain ✓', 'ok');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  Wallet connection
+// ══════════════════════════════════════════════════════════════
+async function connectWallet() {
+  if (!window.ethereum) {
+    $('no-mm-msg').classList.add('show');
+    $('wallet-btn').style.display = 'none';
+    toast('MetaMask is not installed. Get it at metamask.io', 5000);
+    return;
+  }
+
+  const btn   = $('wallet-btn');
+  const label = $('wallet-label');
+
+  // Show loading state
+  label.textContent = 'Connecting…';
+  btn.disabled = true;
+
+  try {
+    // Request account access — triggers MetaMask popup
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if (!accounts.length) throw new Error('No accounts returned');
+
+    await onWalletConnected(accounts[0]);
+
+  } catch (err) {
+    label.textContent = 'Connect Wallet';
+    btn.disabled = false;
+    if (err.code === 4001) {
+      toast('Connection rejected — please accept in MetaMask', 4000);
+    } else {
+      toast('Wallet connection failed: ' + (err.message || err), 4000);
+    }
+    slog('Wallet connection failed: ' + (err.message || ''), 'err');
+  }
+}
+
+async function onWalletConnected(address) {
+  const btn   = $('wallet-btn');
+  const label = $('wallet-label');
+
+  currentAddr = address;
+
+  // Update button → connected state
+  btn.classList.add('connected');
+  btn.disabled = false;
+  label.textContent = address.slice(0, 6) + '…' + address.slice(-4);
+
+  // Auto-fill address field in sidebar
+  $('addr-input').value = address;
+
+  slog(`Wallet connected: ${address}`, 'ok');
+  toast('Wallet connected — checking Noah KYC…', 3000);
+
+  // Automatically check KYC status so the user doesn't have to click again
+  await doCheckStatus();
+
+  // Listen for account switches
+  window.ethereum.removeAllListeners?.('accountsChanged');
+  window.ethereum.on('accountsChanged', async ([newAcc]) => {
+    if (!newAcc) {
+      // User disconnected all accounts
+      onWalletDisconnected();
+    } else {
+      slog(`Account switched to ${newAcc}`, 'warn');
+      toast('Account changed — re-checking KYC…');
+      await onWalletConnected(newAcc);
+    }
+  });
+
+  // Listen for chain switches
+  window.ethereum.on('chainChanged', () => {
+    slog('Chain changed — reloading…', 'warn');
+    window.location.reload();
+  });
+}
+
+function onWalletDisconnected() {
+  currentAddr = '';
+  isVerified  = false;
+  const btn   = $('wallet-btn');
+  btn.classList.remove('connected');
+  $('wallet-label').textContent = 'Connect Wallet';
+  $('addr-input').value = '';
+  $('id-card').style.display = 'none';
+  $('already-verified').style.display = 'none';
+  $('go-register').style.display = 'none';
+  $('game-locked').style.display = '';
+  $('game-ui').classList.remove('show');
+  $('game-lbl').textContent = 'Not verified';
+  $('game-lbl').style.color = 'var(--muted)';
+  goToStep(0);
+  slog('Wallet disconnected', 'warn');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  Quick endpoint buttons
+// ══════════════════════════════════════════════════════════════
+async function qHealth() {
+  $('cx-method').value = 'GET'; $('cx-path').value = '/health';
+  await pingHealth();
+}
+async function qStatus() {
+  const a = $('addr-input').value.trim();
+  if (!isAddr(a)) { toast('Enter address in sidebar first'); return; }
+  $('cx-method').value = 'GET'; $('cx-path').value = `/identity/status/${a}`;
+  await apiFetch('GET', `/identity/status/${a}`);
+}
+async function qNullifier() {
+  const a = $('addr-input').value.trim();
+  if (!isAddr(a)) { toast('Enter address in sidebar first'); return; }
+  $('cx-method').value = 'GET'; $('cx-path').value = `/identity/nullifier/${a}`;
+  await apiFetch('GET', `/identity/nullifier/${a}`);
+}
+async function qProtocolReq() {
+  $('cx-method').value = 'GET'; $('cx-path').value = `/protocol/requirements/${PROTOCOL}`;
+  await apiFetch('GET', `/protocol/requirements/${PROTOCOL}`);
+}
+async function qAccessCheck() {
+  const a = $('addr-input').value.trim();
+  if (!isAddr(a)) { toast('Enter address in sidebar first'); return; }
+  const body = { protocolAddress: PROTOCOL, userAddress: a };
+  $('cx-method').value = 'POST'; $('cx-path').value = '/protocol/access/check';
+  $('cx-body').value   = JSON.stringify(body, null, 2);
+  await apiFetch('POST', '/protocol/access/check', body);
+}
+async function qRelayer() {
+  const k = $('cx-key').value.trim();
+  if (!k) { toast('Enter your X-API-Key in the field below'); return; }
+  $('cx-method').value = 'GET'; $('cx-path').value = '/relayer/status';
+  await apiFetch('GET', '/relayer/status', null, { 'X-API-Key': k });
+}
+async function fireCustom() {
+  const method = $('cx-method').value;
+  const path   = $('cx-path').value.trim();
+  const rawKey = $('cx-key').value.trim();
+  const rawBody = $('cx-body').value.trim();
+  if (!path) { toast('Enter a path'); return; }
+  let body = null;
+  if (rawBody && method === 'POST') {
+    try { body = JSON.parse(rawBody); } catch { toast('Invalid JSON body'); return; }
+  }
+  await apiFetch(method, path, body, rawKey ? {'X-API-Key': rawKey} : {});
+}
+
+// ══════════════════════════════════════════════════════════════
+//  Game
+// ══════════════════════════════════════════════════════════════
+function pickDie(v) {
+  selectedDie = v;
+  document.querySelectorAll('.die').forEach(d => d.classList.toggle('sel', Number(d.dataset.v) === v));
+  $('roll-btn').disabled = false;
+}
+
+function setBet(v) {
+  currentBet = v;
+  $('bet-display').textContent = v.toLocaleString();
+  document.querySelectorAll('.tok').forEach(b => b.classList.toggle('on', Number(b.dataset.b) === v));
+}
+
+function rollDice() {
+  if (!selectedDie || !isVerified) return;
+  if (currentBet > balance) { toast('Not enough coins!'); return; }
+
+  const result = Math.floor(Math.random() * 6) + 1;
+  const diff   = Math.abs(selectedDie - result);
+  const wdiff  = Math.min(diff, 6 - diff);
+
+  let outcome, mult;
+  if (result === selectedDie)  { outcome = 'jackpot'; mult = 5; }
+  else if (wdiff === 1)        { outcome = 'near';    mult = 1.5; }
+  else                         { outcome = 'miss';    mult = 0; }
+
+  const win  = Math.floor(currentBet * mult);
+  const net  = outcome === 'miss' ? -currentBet : win - currentBet;
+  balance += net; pnl += net; games++;
+
+  if (outcome !== 'miss') { winRun++; if (winRun > bestRun) bestRun = winRun; }
+  else winRun = 0;
+
+  // Result flash
+  const fl = $('res-flash');
+  fl.className = `res-flash show ${outcome}`;
+  if (outcome === 'jackpot') {
+    $('rf-em').textContent = '🏆';
+    $('rf-ti').textContent = 'JACKPOT! +' + win.toLocaleString();
+    $('rf-su').textContent = `${DICE[selectedDie-1]} → ${DICE[result-1]} — exact match!`;
+  } else if (outcome === 'near') {
+    $('rf-em').textContent = '🎯';
+    $('rf-ti').textContent = 'Near Miss! +' + win.toLocaleString();
+    $('rf-su').textContent = `${DICE[selectedDie-1]} → ${DICE[result-1]} — one off!`;
+  } else {
+    $('rf-em').textContent = '💨';
+    $('rf-ti').textContent = 'Miss. −' + currentBet.toLocaleString();
+    $('rf-su').textContent = `${DICE[selectedDie-1]} → ${DICE[result-1]}`;
+  }
+
+  updateStats();
+  addHist({ outcome, guess: selectedDie, result, net });
+  slog(`Roll: ${DICE[selectedDie-1]}→${DICE[result-1]} ${outcome} (${net>=0?'+':''}${net})`,
+       outcome==='jackpot'?'ok':outcome==='near'?'info':'warn');
+
+  // Re-check KYC silently every 5 games
+  if (games % 5 === 0) {
+    setTimeout(() => apiFetch('GET', `/identity/status/${currentAddr}`), 400);
+  }
+}
+
+function updateStats() {
+  $('s-bal').textContent = balance.toLocaleString();
+  $('s-games').textContent = games;
+  const pnlEl = $('s-pnl');
+  pnlEl.textContent = (pnl >= 0 ? '+' : '') + pnl.toLocaleString();
+  pnlEl.className   = 'sv ' + (pnl >= 0 ? 'gr' : 'rd');
+  $('s-roi').textContent = ((pnl / 10000) * 100).toFixed(1) + '% ROI';
+  $('s-streak').textContent = bestRun;
+}
+
+function addHist({ outcome, guess, result, net }) {
+  const list = $('hist');
+  if (list.querySelector('[data-ph]')) list.innerHTML = '';
+  const color = outcome==='jackpot'?'gd':outcome==='near'?'gr':'rd';
+  const el = document.createElement('div');
+  el.className = 'hi';
+  el.innerHTML = `
+    <span class="hbdg ${outcome}">${outcome.toUpperCase()}</span>
+    <span>${DICE[guess-1]} → ${DICE[result-1]}</span>
+    <span class="hscore ${color}">${net>=0?'+':''}${net.toLocaleString()}</span>`;
+  list.prepend(el);
+  if (list.children.length > 12) list.lastChild.remove();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  Init
+// ══════════════════════════════════════════════════════════════
+(async () => {
+  await pingHealth();
+  setInterval(pingHealth, 30000);
+  slog('Noah Lucky Vault ready', 'info');
+  slog(`API → ${ab()}`, 'info');
+
+  // If MetaMask isn't installed, show a hint instead of the button
+  if (!window.ethereum) {
+    $('no-mm-msg').classList.add('show');
+    $('wallet-btn').style.display = 'none';
+    slog('MetaMask not detected — address can be pasted manually', 'warn');
+    return;
+  }
+
+  // Auto-reconnect if the user already approved this site in a previous session
+  // (eth_accounts returns connected accounts without triggering a popup)
+  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+  if (accounts.length) {
+    slog('Resuming existing wallet session…', 'info');
+    await onWalletConnected(accounts[0]);
+  }
+})();
+</script>
+</body>
+</html>

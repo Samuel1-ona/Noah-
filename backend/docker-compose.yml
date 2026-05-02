@@ -1,0 +1,42 @@
+version: '3.9'
+
+services:
+  noah-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: noah-backend
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      LOG_LEVEL: info
+      # ── Secrets — supply via .env file or Docker secrets in production ──
+      RELAYER_PRIVATE_KEY: ${RELAYER_PRIVATE_KEY}
+      API_KEY: ${API_KEY}
+      RPC_URL: ${RPC_URL}
+      CHAIN_ID: ${CHAIN_ID:-11155111}
+      FHE_NOAH_REGISTRY_ADDRESS: ${FHE_NOAH_REGISTRY_ADDRESS:-0xd6ACEA76AAF465559Ff9F287b4F883f18368325B}
+      FHE_ACCESS_CONTROL_ADDRESS: ${FHE_ACCESS_CONTROL_ADDRESS:-0x503De26148ACa67Aa97E12eC545B22e7216f1BE4}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      RELAYER_MIN_BALANCE_ETH: ${RELAYER_MIN_BALANCE_ETH:-0.05}
+    healthcheck:
+      test: ['CMD', 'node', '-e',
+        "require('http').get('http://localhost:3000/api/v1/health', r => r.statusCode===200?process.exit(0):process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+    # Read-only filesystem — relayer only needs network + env
+    read_only: true
+    tmpfs:
+      - /tmp
